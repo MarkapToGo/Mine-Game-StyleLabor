@@ -3,6 +3,7 @@ package de.stylelabor.dev.minegamestylelabor;
 import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.*;
+import org.bukkit.block.Block;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
@@ -14,8 +15,6 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
-import java.sql.ResultSet;
-import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
@@ -24,15 +23,11 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.scoreboard.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -44,7 +39,6 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
     private Location corner1 = null;
     private Location corner2 = null;
     private long lastClickTime = 0;
-    private FileConfiguration scoreboardConfig;
     // Add a new Set to store the players who have bypass protection enabled
     private final Set<UUID> bypassProtectionPlayers = new HashSet<>();
     // Add a field for the database connection
@@ -78,6 +72,13 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
             getLogger().log(Level.SEVERE, "An exception was thrown!", e);
         }
 
+        try {
+            PreparedStatement statement = connection.prepareStatement("ALTER TABLE players MODIFY uuid VARCHAR(36)");
+            statement.executeUpdate();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "An exception was thrown!", e);
+        }
+
         // Load corners from data.yml
         File dataFile = new File(getDataFolder(), "data.yml");
         if (dataFile.exists()) {
@@ -101,12 +102,6 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
         Objects.requireNonNull(getCommand("stylelabormine")).setExecutor(this);
         Objects.requireNonNull(getCommand("stylelabormine")).setTabCompleter(this);
 
-        // Load scoreboard.yml
-        File scoreboardFile = new File(getDataFolder(), "scoreboard.yml");
-        if (!scoreboardFile.exists()) {
-            saveResource("scoreboard.yml", false);
-        }
-        scoreboardConfig = YamlConfiguration.loadConfiguration(scoreboardFile);
 
         // Disable weather if the setting is true
         if (getConfig().getBoolean("disableWeather", false)) {
@@ -136,7 +131,6 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
             @EventHandler
             public void onPlayerJoin(PlayerJoinEvent event) {
                 System.out.println("Player joined: " + event.getPlayer().getName()); // Debug message
-                updateScoreboard(event.getPlayer());
             }
         }, this);
 
@@ -147,74 +141,157 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
         // Plugin shutdown logic
     }
 
+
     @Override
     public boolean onCommand(@NotNull CommandSender sender, Command command, @NotNull String label, String[] args) {
         if (command.getName().equalsIgnoreCase("stylelabormine")) {
-            if (!(sender instanceof Player)) {
-                sender.sendMessage("This command can only be run by a player.");
-                return true;
+            if (args.length > 0) {
+                if (args[0].equalsIgnoreCase("coins")) {
+                    if (args.length < 3) {
+                        sender.sendMessage("Usage: /stylelabormine coins <set|add|subtract|lookup> <player> [amount]");
+                        return true;
+                    }
+
+                    String operation = args[1];
+                    Player targetPlayer = getServer().getPlayer(args[2]);
+
+                    if (targetPlayer == null) {
+                        sender.sendMessage("Player not found.");
+                        return true;
+                    }
+
+                    switch (operation.toLowerCase()) {
+                        case "set":
+                        case "add":
+                        case "subtract":
+                            if (args.length < 4) {
+                                sender.sendMessage("Usage: /stylelabormine coins <set|add|subtract> <player> <amount>");
+                                return true;
+                            }
+
+                            int amount;
+
+                            try {
+                                amount = Integer.parseInt(args[3]);
+                            } catch (NumberFormatException e) {
+                                sender.sendMessage("Invalid amount. Please enter a number.");
+                                return true;
+                            }
+
+                            switch (operation.toLowerCase()) {
+                                case "set":
+                                    setCoins(targetPlayer, amount);
+                                    sender.sendMessage("Set coins for " + targetPlayer.getName() + " to " + amount);
+                                    break;
+                                case "add":
+                                    addCoins(targetPlayer, amount);
+                                    sender.sendMessage("Added " + amount + " coins to " + targetPlayer.getName());
+                                    break;
+                                case "subtract":
+                                    subtractCoins(targetPlayer, amount);
+                                    sender.sendMessage("Subtracted " + amount + " coins from " + targetPlayer.getName());
+                                    break;
+                            }
+                            break;
+                        case "lookup":
+                            int coins = getCoins(targetPlayer);
+                            sender.sendMessage(targetPlayer.getName() + " has " + coins + " coins.");
+                            break;
+                        default:
+                            sender.sendMessage("Invalid operation. Use set, add, subtract, or lookup.");
+                            break;
+                    }
+
+                    return true;
+                }
             }
 
-            Player player = (Player) sender;
+            if (args.length > 0) {
+                if (args[0].equalsIgnoreCase("database-test")) {
+                    if (sender instanceof Player) {
+                        Player player = (Player) sender;
+                        if (player.isOp()) {
+                            try {
+                                if (connection != null && !connection.isClosed()) {
+                                    player.sendMessage(ChatColor.GREEN + "Database connection is successful.");
+                                } else {
+                                    player.sendMessage(ChatColor.RED + "Database connection failed.");
+                                }
+                            } catch (SQLException e) {
+                                player.sendMessage(ChatColor.RED + "An error occurred while checking the database connection.");
+                            }
+                        } else {
+                            player.sendMessage(ChatColor.RED + "You do not have permission to perform this command.");
+                        }
+                    }
+                    return true;
+                }
+            }
 
             if (args.length > 0) {
                 if (args[0].equalsIgnoreCase("setup")) {
-                    if (player.isOp()) {
-                        setupPlayer = player;
-                        ItemStack item = new ItemStack(Material.DIAMOND_AXE);
-                        ItemMeta meta = item.getItemMeta();
+                    if (sender instanceof Player) {
+                        Player player = (Player) sender;
+                        if (player.isOp()) {
+                            setupPlayer = player;
+                            ItemStack item = new ItemStack(Material.DIAMOND_AXE);
+                            ItemMeta meta = item.getItemMeta();
 
-                        if (meta != null) {
-                            meta.setDisplayName(ChatColor.GOLD + "" + ChatColor.BOLD + "StyleLabor Mine - Setup");
-                            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
-                            item.setItemMeta(meta);
-                        }
+                            if (meta != null) {
+                                meta.setDisplayName(ChatColor.GOLD + "" + ChatColor.BOLD + "StyleLabor Mine - Setup");
+                                meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+                                item.setItemMeta(meta);
+                            }
 
-                        if (player.getInventory().firstEmpty() != -1) {
-                            player.getInventory().addItem(item);
-                            player.sendMessage("You received the setup tool. Left and right click to define the corners of the mine.");
+                            if (player.getInventory().firstEmpty() != -1) {
+                                player.getInventory().addItem(item);
+                                player.sendMessage("You received the setup tool. Left and right click to define the corners of the mine.");
+                            } else {
+                                player.sendMessage("Your inventory is full. Please clear some space and try again.");
+                            }
                         } else {
-                            player.sendMessage("Your inventory is full. Please clear some space and try again.");
+                            player.sendMessage("You do not have permission to perform this command.");
                         }
-                    } else {
-                        player.sendMessage("You do not have permission to perform this command.");
                     }
                     return true;
                 }
 
                 if (args[0].equalsIgnoreCase("finish")) {
                     if (setupPlayer == null) {
-                        player.sendMessage("You need to start the setup process first.");
+                        sender.sendMessage("You need to start the setup process first.");
                         return true;
                     }
 
-                    if (player.equals(setupPlayer)) {
-                        // Clear the setup tool
-                        ItemStack itemInHand = player.getInventory().getItemInMainHand();
-                        if (itemInHand.getType() == Material.DIAMOND_AXE && Objects.requireNonNull(itemInHand.getItemMeta()).getDisplayName().equals(ChatColor.GOLD + "" + ChatColor.BOLD + "StyleLabor Mine - Setup")) {
-                            player.getInventory().remove(itemInHand);
-                        }
+                    if (sender instanceof Player) {
+                        Player player = (Player) sender;
+                        if (player.equals(setupPlayer)) {
+                            // Clear the setup tool
+                            ItemStack itemInHand = player.getInventory().getItemInMainHand();
+                            if (itemInHand.getType() == Material.DIAMOND_AXE && Objects.requireNonNull(itemInHand.getItemMeta()).getDisplayName().equals(ChatColor.GOLD + "" + ChatColor.BOLD + "StyleLabor Mine - Setup")) {
+                                player.getInventory().remove(itemInHand);
+                            }
 
-                        // Set the region defined by the corners to air and then fill it with blocks based on the percentages in config.yml
-                        if (corner1 != null && corner2 != null) {
-                            // Get the block types and their percentages from config.yml
-                            ConfigurationSection blocksSection = getConfig().getConfigurationSection("blocks");
-                            if (blocksSection != null) {
-                                @SuppressWarnings("DuplicatedCode") List<Material> materials = new ArrayList<>();
-                                for (String key : blocksSection.getKeys(false)) {
-                                    Material material = Material.getMaterial(key);
-                                    int percentage = blocksSection.getInt(key);
-                                    for (int i = 0; i < percentage; i++) {
-                                        materials.add(material);
+                            // Set the region defined by the corners to air and then fill it with blocks based on the percentages in config.yml
+                            if (corner1 != null && corner2 != null) {
+                                // Get the block types and their percentages from config.yml
+                                ConfigurationSection blocksSection = getConfig().getConfigurationSection("blocks");
+                                if (blocksSection != null) {
+                                    @SuppressWarnings("DuplicatedCode") List<Material> materials = new ArrayList<>();
+                                    for (String key : blocksSection.getKeys(false)) {
+                                        Material material = Material.getMaterial(key);
+                                        int percentage = blocksSection.getInt(key);
+                                        for (int i = 0; i < percentage; i++) {
+                                            materials.add(material);
+                                        }
                                     }
-                                }
 
-                                // Fill the region with blocks
-                                for (int x = Math.min(corner1.getBlockX(), corner2.getBlockX()); x <= Math.max(corner1.getBlockX(), corner2.getBlockX()); x++) {
-                                    for (int y = Math.min(corner1.getBlockY(), corner2.getBlockY()); y <= Math.max(corner1.getBlockY(), corner2.getBlockY()); y++) {
-                                        for (int z = Math.min(corner1.getBlockZ(), corner2.getBlockZ()); z <= Math.max(corner1.getBlockZ(), corner2.getBlockZ()); z++) {
-                                            Material material = materials.get(new Random().nextInt(materials.size()));
-                                            new Location(corner1.getWorld(), x, y, z).getBlock().setType(material);
+                                    // Fill the region with blocks
+                                    for (int x = Math.min(corner1.getBlockX(), corner2.getBlockX()); x <= Math.max(corner1.getBlockX(), corner2.getBlockX()); x++) {
+                                        for (int y = Math.min(corner1.getBlockY(), corner2.getBlockY()); y <= Math.max(corner1.getBlockY(), corner2.getBlockY()); y++) {
+                                            for (int z = Math.min(corner1.getBlockZ(), corner2.getBlockZ()); z <= Math.max(corner1.getBlockZ(), corner2.getBlockZ()); z++) {
+                                                Material material = materials.get(new Random().nextInt(materials.size()));
+                                                new Location(corner1.getWorld(), x, y, z).getBlock().setType(material);
+                                            }
                                         }
                                     }
                                 }
@@ -225,16 +302,19 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
                 }
 
                 if (args[0].equalsIgnoreCase("bypassprotection")) {
-                    if (player.isOp()) {
-                        if (bypassProtectionPlayers.contains(player.getUniqueId())) {
-                            bypassProtectionPlayers.remove(player.getUniqueId());
-                            player.sendMessage("Bypass protection disabled.");
+                    if (sender instanceof Player) {
+                        Player player = (Player) sender;
+                        if (player.isOp()) {
+                            if (bypassProtectionPlayers.contains(player.getUniqueId())) {
+                                bypassProtectionPlayers.remove(player.getUniqueId());
+                                player.sendMessage("Bypass protection disabled.");
+                            } else {
+                                bypassProtectionPlayers.add(player.getUniqueId());
+                                player.sendMessage("Bypass protection enabled.");
+                            }
                         } else {
-                            bypassProtectionPlayers.add(player.getUniqueId());
-                            player.sendMessage("Bypass protection enabled.");
+                            player.sendMessage("You do not have permission to perform this command.");
                         }
-                    } else {
-                        player.sendMessage("You do not have permission to perform this command.");
                     }
                     return true;
                 }
@@ -332,47 +412,20 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
         }
     }
 
-    @EventHandler
-    public void onBlockPlace(BlockPlaceEvent event) {
-        Player player = event.getPlayer();
 
-        // If the player has bypass protection enabled, do not cancel the event
-        if (bypassProtectionPlayers.contains(player.getUniqueId())) {
-            return;
-        }
 
-        // If the player is not an operator, cancel the event
-        event.setCancelled(true);
-    }
-
-    public void updateScoreboard(Player player) {
-        ScoreboardManager manager = Bukkit.getScoreboardManager();
-        if (manager != null) {
-            Scoreboard scoreboard = manager.getNewScoreboard();
-            String title = ChatColor.translateAlternateColorCodes('&', scoreboardConfig.getString("title", "Scoreboard"));
-            Objective objective = scoreboard.registerNewObjective("StyleLaborMine", Criteria.DUMMY, title, RenderType.INTEGER);
-            objective.setDisplaySlot(DisplaySlot.SIDEBAR);
-
-            // Get the player's current coin balance
-            int coins = getCoins(player);
-
-            List<String> lines = scoreboardConfig.getStringList("lines");
-            for (int i = 0; i < lines.size(); i++) {
-                String line = lines.get(i);
-
-                // Replace the placeholder with the player's current coin balance
-                line = line.replace("%stylelabormine_coins%", String.valueOf(coins));
-
-                Score score = objective.getScore(line);
-                score.setScore(lines.size() - i);
-            }
-
-            player.setScoreboard(scoreboard);
-        }
-    }
 
     @EventHandler
     public void onBlockBreak(BlockBreakEvent event) {
+        // Get the block that was broken
+        Block block = event.getBlock();
+
+        // Check if the block is an ore
+        if (block.getType() == Material.DIAMOND_ORE || block.getType() == Material.GOLD_ORE || block.getType() == Material.IRON_ORE) {
+            // Prevent the block from dropping items and experience
+            event.setDropItems(false);
+            event.setExpToDrop(0);
+        }
         Player player = event.getPlayer();
         ItemStack itemInHand = player.getInventory().getItemInMainHand();
         if (itemInHand.getType() == Material.DIAMOND_AXE && Objects.requireNonNull(itemInHand.getItemMeta()).getDisplayName().equals(ChatColor.GOLD + "" + ChatColor.BOLD + "StyleLabor Mine - Setup")) {
@@ -467,10 +520,39 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
 
     private void giveCoins(Player player, int amount) {
         try {
-            PreparedStatement statement = connection.prepareStatement("UPDATE players SET coins = coins + ? WHERE uuid = ?");
-            statement.setInt(1, amount);
-            statement.setString(2, player.getUniqueId().toString());
-            statement.executeUpdate();
+            // Check if the player exists in the database
+            PreparedStatement checkStatement = connection.prepareStatement("SELECT * FROM players WHERE uuid = ?");
+            checkStatement.setString(1, player.getUniqueId().toString());
+            ResultSet resultSet = checkStatement.executeQuery();
+
+            if (resultSet.next()) {
+                // If the player exists, update their coins
+                PreparedStatement updateStatement = connection.prepareStatement("UPDATE players SET coins = coins + ? WHERE uuid = ?");
+                updateStatement.setInt(1, amount);
+                updateStatement.setString(2, player.getUniqueId().toString());
+                int rowsUpdated = updateStatement.executeUpdate();
+                if (rowsUpdated > 0) {
+                    LOGGER.log(Level.INFO, "Updated coins for player: " + player.getUniqueId());
+                } else {
+                    LOGGER.log(Level.WARNING, "Failed to update coins for player: " + player.getUniqueId());
+                }
+            } else {
+                // If the player does not exist, insert a new row for them
+                PreparedStatement insertStatement = connection.prepareStatement("INSERT INTO players (uuid, coins) VALUES (?, ?)");
+                insertStatement.setString(1, player.getUniqueId().toString());
+                insertStatement.setInt(2, amount);
+                int rowsInserted = insertStatement.executeUpdate();
+                if (rowsInserted > 0) {
+                    LOGGER.log(Level.INFO, "Inserted new player with coins: " + player.getUniqueId());
+                } else {
+                    LOGGER.log(Level.WARNING, "Failed to insert new player with coins: " + player.getUniqueId());
+                }
+            }
+
+            // Set the player's experience level to the new amount of coins
+            player.setLevel(getCoins(player));
+            // Set the player's experience points to a value just below the next level
+            player.setExp(0.9999f);
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "An exception was thrown!", e);
         }
@@ -496,14 +578,45 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
         }
     }
 
+    private void setCoins(Player player, int amount) {
+        try {
+            PreparedStatement statement = connection.prepareStatement("UPDATE players SET coins = ? WHERE uuid = ?");
+            statement.setInt(1, amount);
+            statement.setString(2, player.getUniqueId().toString());
+            statement.executeUpdate();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "An exception was thrown!", e);
+        }
+    }
+
+    private void addCoins(Player player, int amount) {
+        giveCoins(player, amount);
+    }
+
+    private void subtractCoins(Player player, int amount) {
+        try {
+            PreparedStatement statement = connection.prepareStatement("UPDATE players SET coins = coins - ? WHERE uuid = ?");
+            statement.setInt(1, amount);
+            statement.setString(2, player.getUniqueId().toString());
+            statement.executeUpdate();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "An exception was thrown!", e);
+        }
+    }
+
     @Override
     public List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, String[] args) {
         if (command.getName().equalsIgnoreCase("stylelabormine")) {
             if (args.length == 1) {
-                List<String> list = new ArrayList<>();
-                list.add("setup");
-                list.add("bypassprotection"); // Add the new command to the tab completion list
-                return list;
+                return Arrays.asList("setup", "bypassprotection", "database-test", "coins");
+            } else if (args.length == 2 && args[0].equalsIgnoreCase("coins")) {
+                return Arrays.asList("set", "add", "subtract", "lookup");
+            } else if (args.length == 3 && args[0].equalsIgnoreCase("coins")) {
+                List<String> playerNames = new ArrayList<>();
+                for (Player player : Bukkit.getOnlinePlayers()) {
+                    playerNames.add(player.getName());
+                }
+                return playerNames;
             }
         }
         return null;

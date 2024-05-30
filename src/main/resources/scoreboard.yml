@@ -1,8 +1,0 @@
-title: '&6&lStyleLabor Mine Game'
-lines:
-  - text: 'Line 1 %stylelabormine_coins%'
-    updateFrequency: 20
-  - text: 'Line 2'
-    updateFrequency: 40
-  - text: 'Line 3'
-    updateFrequency: 60
