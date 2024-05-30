@@ -1,13 +1,13 @@
 package de.stylelabor.dev.minegamestylelabor;
 
-import org.bukkit.ChatColor;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.World;
+import net.md_5.bungee.api.chat.ClickEvent;
+import net.md_5.bungee.api.chat.TextComponent;
+import org.bukkit.*;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -16,21 +16,19 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
-import net.md_5.bungee.api.chat.ClickEvent;
-import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scoreboard.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Random;
+import java.util.*;
+
 
 public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, TabCompleter {
 
@@ -38,6 +36,7 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
     private Location corner1 = null;
     private Location corner2 = null;
     private long lastClickTime = 0;
+    private FileConfiguration scoreboardConfig;
 
     @Override
     public void onEnable() {
@@ -62,6 +61,23 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
         getServer().getPluginManager().registerEvents(this, this);
         Objects.requireNonNull(getCommand("stylelabormine")).setExecutor(this);
         Objects.requireNonNull(getCommand("stylelabormine")).setTabCompleter(this);
+
+        // Load scoreboard.yml
+        File scoreboardFile = new File(getDataFolder(), "scoreboard.yml");
+        if (!scoreboardFile.exists()) {
+            saveResource("scoreboard.yml", false);
+        }
+        scoreboardConfig = YamlConfiguration.loadConfiguration(scoreboardFile);
+
+        // Register the PlayerJoinEvent
+        getServer().getPluginManager().registerEvents(new Listener() {
+            @EventHandler
+            public void onPlayerJoin(PlayerJoinEvent event) {
+                System.out.println("Player joined: " + event.getPlayer().getName()); // Debug message
+                updateScoreboard(event.getPlayer());
+            }
+        }, this);
+
     }
 
     @Override
@@ -236,6 +252,35 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
                     break;
                 }
             }
+        }
+    }
+
+    public void updateScoreboard(Player player) {
+        System.out.println("Updating scoreboard for player: " + player.getName()); // Debug message
+        ScoreboardManager manager = Bukkit.getScoreboardManager();
+        if (manager != null) {
+            Scoreboard scoreboard = manager.getNewScoreboard();
+            Objective objective = scoreboard.registerNewObjective("StyleLaborMine", Criteria.DUMMY, scoreboardConfig.getString("title", "Scoreboard"), RenderType.INTEGER);
+            objective.setDisplaySlot(DisplaySlot.SIDEBAR);
+
+            List<Map<?, ?>> lines = scoreboardConfig.getMapList("lines");
+            for (int i = 0; i < lines.size(); i++) {
+                Map<?, ?> lineMap = lines.get(i);
+                String text = ChatColor.translateAlternateColorCodes('&', (String) lineMap.get("text"));
+                int updateFrequency = (int) lineMap.get("updateFrequency");
+                Score score = objective.getScore(text);
+                score.setScore(lines.size() - i);
+
+                // Schedule a repeating task to update the line text
+                new BukkitRunnable() {
+                    @Override
+                    public void run() {
+                        // Update the line text here
+                    }
+                }.runTaskTimer(this, 0, updateFrequency);
+            }
+
+            player.setScoreboard(scoreboard);
         }
     }
 
