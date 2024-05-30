@@ -14,6 +14,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
@@ -218,6 +219,27 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
     }
 
     @EventHandler
+    public void onEntityDamage(EntityDamageEvent event) {
+        if (event.getEntity() instanceof Player && event.getCause() == EntityDamageEvent.DamageCause.SUFFOCATION) {
+            Player player = (Player) event.getEntity();
+            World world = player.getWorld();
+            Location location = player.getLocation();
+            int x = location.getBlockX();
+            int y = location.getBlockY();
+            int z = location.getBlockZ();
+
+            // Find the next higher possible Y level
+            for (int i = y; i < world.getMaxHeight(); i++) {
+                if (!world.getBlockAt(x, i, z).getType().isSolid() && !world.getBlockAt(x, i + 1, z).getType().isSolid()) {
+                    // Teleport the player to the new location
+                    player.teleport(new Location(world, x, i, z, location.getYaw(), location.getPitch()));
+                    break;
+                }
+            }
+        }
+    }
+
+    @EventHandler
     public void onBlockBreak(BlockBreakEvent event) {
         getLogger().info("Block break event triggered");
 
@@ -263,7 +285,7 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
                             event.getBlock().setType(material);
                             getLogger().info("Block type set to new material");
                         }
-                    }.runTaskLater(this, 1); // 1 tick delay
+                    }.runTaskLater(this, getConfig().getLong("regenDelay", 5) * 20); // Convert seconds to ticks
                 }
             }
         }

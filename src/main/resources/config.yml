@@ -1,6 +1,8 @@
 #CONFIGURATION FILE
-clickDelay: 20
+clickDelay: 14
+regenDelay: 5 # in seconds
 blocks:
   STONE: 80
   DIAMOND_ORE: 10
-  GOLD_BLOCK: 10
+  GOLD_BLOCK: 8
+  DIAMOND_BLOCK: 2
