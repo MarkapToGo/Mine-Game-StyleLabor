@@ -1,8 +1,16 @@
 #CONFIGURATION FILE
 clickDelay: 14
+disableWeather: true
+disableTimeCycle: true
+disableMobSpawn: true
 regenDelay: 5 # in seconds
 blocks:
   STONE: 80
   DIAMOND_ORE: 10
   GOLD_BLOCK: 8
   DIAMOND_BLOCK: 2
+blockCoins:
+  STONE: 0
+  DIAMOND_ORE: 20
+  GOLD_BLOCK: 15
+  DIAMOND_BLOCK: 30

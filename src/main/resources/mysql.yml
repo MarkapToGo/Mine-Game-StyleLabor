@@ -1,0 +1,5 @@
+hostname: localhost
+port: 3306
+database: mine-game
+username: mine-game
+password: Ichbinein123
