@@ -1,0 +1,12 @@
+name: Mine-Game-StyleLabor
+version: '${project.version}'
+main: de.stylelabor.dev.minegamestylelabor.Mine_Game_StyleLabor
+api-version: '1.20'
+prefix: StyleLaborMine
+authors: [Markap]
+description: A simple mine game for StyleLabor!
+website: dc.stylelabor.de
+commands:
+  stylelabormine:
+    description: Setup command for StyleLaborMine
+    usage: /<command> <setup>

@@ -1,0 +1,5 @@
+clickDelay: 20
+blocks:
+  STONE: 80
+  DIAMOND_ORE: 10
+  GOLD_BLOCK: 10
