@@ -159,8 +159,9 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
                 List<Material> materials = new ArrayList<>();
                 for (String key : blocksSection.getKeys(false)) {
                     Material material = Material.getMaterial(key);
-                    int percentage = blocksSection.getInt(key);
-                    for (int i = 0; i < percentage; i++) {
+                    double percentage = blocksSection.getDouble(key);
+                    int amount = (int) (percentage * 100); // Convert the percentage to an amount out of 100
+                    for (int i = 0; i < amount; i++) {
                         materials.add(material);
                     }
                 }
