@@ -1,0 +1,9 @@
+coins:
+  usage: "Usage: /stylelabormine coins <set|add|subtract|lookup> <player> [amount]"
+  player_not_found: "Player not found."
+  invalid_amount: "Invalid amount. Please enter a number."
+  set_coins: "Set coins for %s to %d"
+  add_coins: "Added %d coins to %s"
+  subtract_coins: "Subtracted %d coins from %s"
+  lookup_coins: "%s has %d coins."
+  invalid_operation: "Invalid operation. Use set, add, subtract, or lookup."

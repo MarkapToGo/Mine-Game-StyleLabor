@@ -44,12 +44,16 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
     // Add a field for the database connection
     private Connection connection;
     private static final Logger LOGGER = Logger.getLogger(Mine_Game_StyleLabor.class.getName());
+    private FileConfiguration messagesConfig;
 
     @Override
     public void onEnable() {
         // Ensures that a config.yml file exists. If it doesn't, the plugin copies the default one included in the JAR file.
         saveDefaultConfig();
-
+        saveResource("messages.yml", false);
+        // Load messages.yml
+        File messagesFile = new File(getDataFolder(), "messages.yml");
+        messagesConfig = YamlConfiguration.loadConfiguration(messagesFile);
         // Load mysql.yml
         File mysqlFile = new File(getDataFolder(), "mysql.yml");
         if (!mysqlFile.exists()) {
@@ -126,6 +130,9 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
             }
         }
 
+        // Regenerate the mine region
+        regenerateMineRegion();
+
         // Register the PlayerJoinEvent
         getServer().getPluginManager().registerEvents(new Listener() {
             @EventHandler
@@ -142,13 +149,51 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
     }
 
 
+    @SuppressWarnings("DuplicatedCode")
+    private void regenerateMineRegion() {
+        // Check if the corners are set
+        if (corner1 != null && corner2 != null) {
+            // Get the block types and their percentages from config.yml
+            ConfigurationSection blocksSection = getConfig().getConfigurationSection("blocks");
+            if (blocksSection != null) {
+                List<Material> materials = new ArrayList<>();
+                for (String key : blocksSection.getKeys(false)) {
+                    Material material = Material.getMaterial(key);
+                    int percentage = blocksSection.getInt(key);
+                    for (int i = 0; i < percentage; i++) {
+                        materials.add(material);
+                    }
+                }
+
+                // Fill the region with blocks
+                for (int x = Math.min(corner1.getBlockX(), corner2.getBlockX()); x <= Math.max(corner1.getBlockX(), corner2.getBlockX()); x++) {
+                    for (int y = Math.min(corner1.getBlockY(), corner2.getBlockY()); y <= Math.max(corner1.getBlockY(), corner2.getBlockY()); y++) {
+                        for (int z = Math.min(corner1.getBlockZ(), corner2.getBlockZ()); z <= Math.max(corner1.getBlockZ(), corner2.getBlockZ()); z++) {
+                            Material material = materials.get(new Random().nextInt(materials.size()));
+                            new Location(corner1.getWorld(), x, y, z).getBlock().setType(material);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    public String getMessage(String path, Object... args) {
+        String message = messagesConfig.getString(path);
+        if (message != null) {
+            return String.format(message, args);
+        }
+        return "";
+    }
+
+    @SuppressWarnings("DuplicatedCode")
     @Override
     public boolean onCommand(@NotNull CommandSender sender, Command command, @NotNull String label, String[] args) {
         if (command.getName().equalsIgnoreCase("stylelabormine")) {
             if (args.length > 0) {
                 if (args[0].equalsIgnoreCase("coins")) {
                     if (args.length < 3) {
-                        sender.sendMessage("Usage: /stylelabormine coins <set|add|subtract|lookup> <player> [amount]");
+                        sender.sendMessage(getMessage("coins.usage"));
                         return true;
                     }
 
@@ -156,55 +201,77 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
                     Player targetPlayer = getServer().getPlayer(args[2]);
 
                     if (targetPlayer == null) {
-                        sender.sendMessage("Player not found.");
+                        sender.sendMessage(getMessage("coins.player_not_found"));
                         return true;
                     }
+
+                    int amount;
 
                     switch (operation.toLowerCase()) {
                         case "set":
                         case "add":
                         case "subtract":
                             if (args.length < 4) {
-                                sender.sendMessage("Usage: /stylelabormine coins <set|add|subtract> <player> <amount>");
+                                sender.sendMessage(getMessage("coins.usage"));
                                 return true;
                             }
-
-                            int amount;
 
                             try {
                                 amount = Integer.parseInt(args[3]);
                             } catch (NumberFormatException e) {
-                                sender.sendMessage("Invalid amount. Please enter a number.");
+                                sender.sendMessage(getMessage("coins.invalid_amount"));
                                 return true;
                             }
 
                             switch (operation.toLowerCase()) {
                                 case "set":
                                     setCoins(targetPlayer, amount);
-                                    sender.sendMessage("Set coins for " + targetPlayer.getName() + " to " + amount);
+                                    sender.sendMessage(getMessage("coins.set_coins", targetPlayer.getName(), amount));
                                     break;
                                 case "add":
                                     addCoins(targetPlayer, amount);
-                                    sender.sendMessage("Added " + amount + " coins to " + targetPlayer.getName());
+                                    sender.sendMessage(getMessage("coins.add_coins", amount, targetPlayer.getName()));
                                     break;
                                 case "subtract":
                                     subtractCoins(targetPlayer, amount);
-                                    sender.sendMessage("Subtracted " + amount + " coins from " + targetPlayer.getName());
+                                    sender.sendMessage(getMessage("coins.subtract_coins", amount, targetPlayer.getName()));
                                     break;
                             }
                             break;
                         case "lookup":
                             int coins = getCoins(targetPlayer);
-                            sender.sendMessage(targetPlayer.getName() + " has " + coins + " coins.");
+                            sender.sendMessage(getMessage("coins.lookup_coins", targetPlayer.getName(), coins));
+                            break;
+                        case "command":
+                            if (args.length < 5) {
+                                sender.sendMessage("Usage: /stylelabormine coins command <player> <amount> <command>");
+                                return true;
+                            }
+
+                            try {
+                                amount = Integer.parseInt(args[3]);
+                            } catch (NumberFormatException e) {
+                                sender.sendMessage(getMessage("coins.invalid_amount"));
+                                return true;
+                            }
+
+                            if (getCoins(targetPlayer) >= amount) {
+                                subtractCoins(targetPlayer, amount);
+                                String commandToExecute = String.join(" ", Arrays.copyOfRange(args, 4, args.length));
+                                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), commandToExecute);
+                            } else {
+                                sender.sendMessage("Player does not have enough coins.");
+                            }
                             break;
                         default:
-                            sender.sendMessage("Invalid operation. Use set, add, subtract, or lookup.");
+                            sender.sendMessage(getMessage("coins.invalid_operation"));
                             break;
                     }
 
                     return true;
                 }
             }
+
 
             if (args.length > 0) {
                 if (args[0].equalsIgnoreCase("database-test")) {
@@ -277,6 +344,7 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
                                 ConfigurationSection blocksSection = getConfig().getConfigurationSection("blocks");
                                 if (blocksSection != null) {
                                     @SuppressWarnings("DuplicatedCode") List<Material> materials = new ArrayList<>();
+                                    //noinspection DuplicatedCode
                                     for (String key : blocksSection.getKeys(false)) {
                                         Material material = Material.getMaterial(key);
                                         int percentage = blocksSection.getInt(key);
@@ -455,7 +523,7 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
                 // Get the block types and their percentages from config.yml
                 ConfigurationSection blocksSection = getConfig().getConfigurationSection("blocks");
                 if (blocksSection != null) {
-                    List<Material> materials = new ArrayList<>();
+                    @SuppressWarnings("DuplicatedCode") List<Material> materials = new ArrayList<>();
                     for (String key : blocksSection.getKeys(false)) {
                         Material material = Material.getMaterial(key);
                         int percentage = blocksSection.getInt(key);
@@ -506,6 +574,8 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
         }
         return 0;
     }
+
+
 
     private Location stringToLocation(String string) {
         String[] parts = string.split(",");
