@@ -7,3 +7,4 @@ coins:
   subtract_coins: "Subtracted %d coins from %s"
   lookup_coins: "%s has %d coins."
   invalid_operation: "Invalid operation. Use set, add, subtract, or lookup."
+  need_pickaxe: "You need a %s to mine this block."

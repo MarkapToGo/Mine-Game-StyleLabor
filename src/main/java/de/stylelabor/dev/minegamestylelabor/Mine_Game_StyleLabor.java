@@ -23,6 +23,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
@@ -45,6 +46,7 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
     private Connection connection;
     private static final Logger LOGGER = Logger.getLogger(Mine_Game_StyleLabor.class.getName());
     private FileConfiguration messagesConfig;
+    private BukkitTask coinUpdateTask;
 
     @Override
     public void onEnable() {
@@ -82,6 +84,18 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "An exception was thrown!", e);
         }
+
+        // Start the coin update task
+        int coinUpdateFrequency = getConfig().getInt("coinUpdateFrequency");
+        coinUpdateTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                for (Player player : Bukkit.getOnlinePlayers()) {
+                    player.setLevel(getCoins(player));
+                    player.setExp(0.9999f);
+                }
+            }
+        }.runTaskTimer(this, 0, coinUpdateFrequency * 20L); // Convert seconds to ticks
 
         // Load corners from data.yml
         File dataFile = new File(getDataFolder(), "data.yml");
@@ -146,6 +160,11 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
     @Override
     public void onDisable() {
         // Plugin shutdown logic
+
+        // Cancel the coin update task
+        if (coinUpdateTask != null) {
+            coinUpdateTask.cancel();
+        }
     }
 
 
@@ -480,9 +499,6 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
             }
         }
     }
-
-
-
 
     @EventHandler
     public void onBlockBreak(BlockBreakEvent event) {
