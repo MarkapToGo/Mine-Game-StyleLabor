@@ -4,6 +4,7 @@ disableWeather: true
 disableTimeCycle: true
 debug: false # set to true to enable debug messages
 disableMobSpawn: true
+disablePlayerDamage: true # set to false to enable player damage
 coinUpdateFrequency: 5 # in seconds
 regenDelay: 5 # in seconds
 blocks:

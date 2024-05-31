@@ -211,6 +211,20 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
     public boolean onCommand(@NotNull CommandSender sender, Command command, @NotNull String label, String[] args) {
         if (command.getName().equalsIgnoreCase("stylelabormine")) {
             if (args.length > 0) {
+                if (args[0].equalsIgnoreCase("tpsurface")) {
+                    if (sender instanceof Player) {
+                        Player player = (Player) sender;
+                        Location location = player.getLocation();
+                        while (location.getBlock().getType() != Material.AIR) {
+                            location.add(0, 1, 0);
+                        }
+                        player.teleport(location);
+                        player.sendMessage("Teleported to the surface.");
+                    } else {
+                        sender.sendMessage("This command can only be used by a player.");
+                    }
+                    return true;
+                }
                 if (args[0].equalsIgnoreCase("coins")) {
                     if (args.length < 3) {
                         sender.sendMessage(getMessage("coins.usage"));
@@ -481,20 +495,20 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
 
     @EventHandler
     public void onEntityDamage(EntityDamageEvent event) {
-        if (event.getEntity() instanceof Player && event.getCause() == EntityDamageEvent.DamageCause.SUFFOCATION) {
-            Player player = (Player) event.getEntity();
-            World world = player.getWorld();
-            Location location = player.getLocation();
-            int x = location.getBlockX();
-            int y = location.getBlockY();
-            int z = location.getBlockZ();
+        if (event.getEntity() instanceof Player) {
+            if (getConfig().getBoolean("disablePlayerDamage", false)) {
+                // If player damage is disabled, cancel the event
+                event.setCancelled(true);
 
-            // Find the next higher possible Y level
-            for (int i = y; i < world.getMaxHeight(); i++) {
-                if (!world.getBlockAt(x, i, z).getType().isSolid() && !world.getBlockAt(x, i + 1, z).getType().isSolid()) {
-                    // Teleport the player to the new location
-                    player.teleport(new Location(world, x, i, z, location.getYaw(), location.getPitch()));
-                    break;
+                // Check if the damage cause is suffocation
+                if (event.getCause() == EntityDamageEvent.DamageCause.SUFFOCATION) {
+                    // If the player is suffocating, teleport them to the surface
+                    Player player = (Player) event.getEntity();
+                    Location location = player.getLocation();
+                    while (location.getBlock().getType() != Material.AIR) {
+                        location.add(0, 1, 0);
+                    }
+                    player.teleport(location);
                 }
             }
         }
@@ -699,7 +713,7 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
     public List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, String[] args) {
         if (command.getName().equalsIgnoreCase("stylelabormine")) {
             if (args.length == 1) {
-                return Arrays.asList("setup", "bypassprotection", "database-test", "coins");
+                return Arrays.asList("setup", "bypassprotection", "database-test", "coins", "tpsurface");
             } else if (args.length == 2 && args[0].equalsIgnoreCase("coins")) {
                 return Arrays.asList("set", "add", "subtract", "lookup");
             } else if (args.length == 3 && args[0].equalsIgnoreCase("coins")) {
