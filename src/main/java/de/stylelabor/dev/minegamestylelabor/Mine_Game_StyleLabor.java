@@ -592,7 +592,11 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
         return 0;
     }
 
-
+    public void debug(String message) {
+        if (getConfig().getBoolean("debug", false)) {
+            getLogger().info("[DEBUG] " + message);
+        }
+    }
 
     private Location stringToLocation(String string) {
         String[] parts = string.split(",");
@@ -619,7 +623,7 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
                 updateStatement.setString(2, player.getUniqueId().toString());
                 int rowsUpdated = updateStatement.executeUpdate();
                 if (rowsUpdated > 0) {
-                    LOGGER.log(Level.INFO, "Updated coins for player: " + player.getUniqueId());
+                    debug("Updated coins for player: " + player.getUniqueId());
                 } else {
                     LOGGER.log(Level.WARNING, "Failed to update coins for player: " + player.getUniqueId());
                 }
