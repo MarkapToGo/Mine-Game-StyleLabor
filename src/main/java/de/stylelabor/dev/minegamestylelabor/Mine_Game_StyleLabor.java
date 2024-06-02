@@ -225,6 +225,7 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
         if (command.getName().equalsIgnoreCase("stylelabormine")) {
             if (args.length > 0) {
 
+                //setspawn command
                 if (args[0].equalsIgnoreCase("setspawn")) {
                     if (sender instanceof Player) {
                         Player player = (Player) sender;
@@ -249,6 +250,7 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
                     return true;
                 }
 
+                //tpsurface command
                 if (args[0].equalsIgnoreCase("tpsurface")) {
                     if (sender instanceof Player) {
                         Player player = (Player) sender;
@@ -279,6 +281,7 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
 
                     int amount;
 
+                    //switch statement for coins command
                     switch (operation.toLowerCase()) {
                         case "set":
                         case "add":
@@ -310,10 +313,12 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
                                     break;
                             }
                             break;
+                        // Lookup command for coins from player
                         case "lookup":
                             int coins = getCoins(targetPlayer);
                             sender.sendMessage(getMessage("coins.lookup_coins", targetPlayer.getName(), coins));
                             break;
+                        // perform command on player if they have enough coins and then subtract the coins
                         case "command":
                             if (args.length < 5) {
                                 sender.sendMessage("Usage: /stylelabormine coins command <player> <amount> <command>");
@@ -343,6 +348,7 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
                 }
             }
 
+            // Test the database connection
             if (args.length > 0) {
                 if (args[0].equalsIgnoreCase("database-test")) {
                     if (sender instanceof Player) {
