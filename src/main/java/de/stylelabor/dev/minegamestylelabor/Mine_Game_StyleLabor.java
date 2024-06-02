@@ -282,246 +282,242 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
         return "";
     }
 
-    @SuppressWarnings("DuplicatedCode")
+
     @Override
     public boolean onCommand(@NotNull CommandSender sender, Command command, @NotNull String label, String[] args) {
         if (command.getName().equalsIgnoreCase("stylelabormine")) {
             if (args.length > 0) {
-
-                //setspawn command
-                if (args[0].equalsIgnoreCase("setspawn")) {
-                    if (!(sender instanceof Player)) {
-                        sender.sendMessage("This command can only be used by a player.");
+                switch (args[0].toLowerCase()) {
+                    case "setspawn":
+                        handleSetSpawnCommand(sender, args);
                         return true;
-                    }
-                    if (args.length < 3) {
-                        sender.sendMessage("You need to add a yaw and a pitch. Usage: /stylelabormine setspawn <pitch> <yaw>");
+                    case "tpsurface":
+                        handleTpSurfaceCommand(sender, args);
                         return true;
-                    }
-                    Player player = (Player) sender;
-                    float pitch = Float.parseFloat(args[1]);
-                    float yaw = Float.parseFloat(args[2]);
-                    settingSpawnPlayers.put(player.getUniqueId(), new float[]{pitch, yaw});
-                    player.sendMessage("Click on a block to set the spawn location.");
-                    return true;
-                }
-
-                //tpsurface command
-                if (args[0].equalsIgnoreCase("tpsurface")) {
-                    if (sender instanceof Player) {
-                        Player player = (Player) sender;
-                        Location location = player.getLocation();
-                        while (location.getBlock().getType() != Material.AIR) {
-                            location.add(0, 1, 0);
-                        }
-                        player.teleport(location);
-                        player.sendMessage("Teleported to the surface.");
-                    } else {
-                        sender.sendMessage("This command can only be used by a player.");
-                    }
-                    return true;
-                }
-                if (args[0].equalsIgnoreCase("coins")) {
-                    if (args.length < 3) {
-                        sender.sendMessage(getMessage("coins.usage"));
+                    case "coins":
+                        handleCoinsCommand(sender, args);
                         return true;
-                    }
-
-                    String operation = args[1];
-                    Player targetPlayer = getServer().getPlayer(args[2]);
-
-                    if (targetPlayer == null) {
-                        sender.sendMessage(getMessage("coins.player_not_found"));
+                    case "database-test":
+                        handleDatabaseTestCommand(sender, args);
                         return true;
-                    }
-
-                    int amount;
-
-                    //switch statement for coins command
-                    switch (operation.toLowerCase()) {
-                        case "set":
-                        case "add":
-                        case "subtract":
-                            if (args.length < 4) {
-                                sender.sendMessage(getMessage("coins.usage"));
-                                return true;
-                            }
-
-                            try {
-                                amount = Integer.parseInt(args[3]);
-                            } catch (NumberFormatException e) {
-                                sender.sendMessage(getMessage("coins.invalid_amount"));
-                                return true;
-                            }
-
-                            switch (operation.toLowerCase()) {
-                                case "set":
-                                    setCoins(targetPlayer, amount);
-                                    sender.sendMessage(getMessage("coins.set_coins", targetPlayer.getName(), amount));
-                                    break;
-                                case "add":
-                                    addCoins(targetPlayer, amount);
-                                    sender.sendMessage(getMessage("coins.add_coins", amount, targetPlayer.getName()));
-                                    break;
-                                case "subtract":
-                                    subtractCoins(targetPlayer, amount);
-                                    sender.sendMessage(getMessage("coins.subtract_coins", amount, targetPlayer.getName()));
-                                    break;
-                            }
-                            break;
-                        // Lookup command for coins from player
-                        case "lookup":
-                            int coins = getCoins(targetPlayer);
-                            sender.sendMessage(getMessage("coins.lookup_coins", targetPlayer.getName(), coins));
-                            break;
-                        // perform command on player if they have enough coins and then subtract the coins
-                        case "command":
-                            if (args.length < 5) {
-                                sender.sendMessage("Usage: /stylelabormine coins command <player> <amount> <command>");
-                                return true;
-                            }
-
-                            try {
-                                amount = Integer.parseInt(args[3]);
-                            } catch (NumberFormatException e) {
-                                sender.sendMessage(getMessage("coins.invalid_amount"));
-                                return true;
-                            }
-
-                            if (getCoins(targetPlayer) >= amount) {
-                                subtractCoins(targetPlayer, amount);
-                                String[] commands = String.join(" ", Arrays.copyOfRange(args, 4, args.length)).split("&&");
-                                for (String commandToExecute : commands) {
-                                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), commandToExecute.trim());
-                                }
-                            } else {
-                                sender.sendMessage("Player does not have enough coins.");
-                            }
-                            break;
-                    }
-
-                    return true;
-                }
-            }
-
-            // Test the database connection
-            if (args.length > 0) {
-                if (args[0].equalsIgnoreCase("database-test")) {
-                    if (sender instanceof Player) {
-                        Player player = (Player) sender;
-                        if (player.isOp()) {
-                            try {
-                                if (connection != null && !connection.isClosed()) {
-                                    player.sendMessage(ChatColor.GREEN + "Database connection is successful.");
-                                } else {
-                                    player.sendMessage(ChatColor.RED + "Database connection failed.");
-                                }
-                            } catch (SQLException e) {
-                                player.sendMessage(ChatColor.RED + "An error occurred while checking the database connection.");
-                            }
-                        } else {
-                            player.sendMessage(ChatColor.RED + "You do not have permission to perform this command.");
-                        }
-                    }
-                    return true;
-                }
-            }
-
-            if (args.length > 0) {
-                if (args[0].equalsIgnoreCase("setup")) {
-                    if (sender instanceof Player) {
-                        Player player = (Player) sender;
-                        if (player.isOp()) {
-                            setupPlayer = player;
-                            ItemStack item = new ItemStack(Material.DIAMOND_AXE);
-                            ItemMeta meta = item.getItemMeta();
-
-                            if (meta != null) {
-                                meta.setDisplayName(ChatColor.GOLD + "" + ChatColor.BOLD + "StyleLabor Mine - Setup");
-                                meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
-                                item.setItemMeta(meta);
-                            }
-
-                            if (player.getInventory().firstEmpty() != -1) {
-                                player.getInventory().addItem(item);
-                                player.sendMessage("You received the setup tool. Left and right click to define the corners of the mine.");
-                            } else {
-                                player.sendMessage("Your inventory is full. Please clear some space and try again.");
-                            }
-                        } else {
-                            player.sendMessage("You do not have permission to perform this command.");
-                        }
-                    }
-                    return true;
-                }
-
-                if (args[0].equalsIgnoreCase("finish")) {
-                    if (setupPlayer == null) {
-                        sender.sendMessage("You need to start the setup process first.");
+                    case "setup":
+                        handleSetupCommand(sender, args);
                         return true;
-                    }
-
-                    if (sender instanceof Player) {
-                        Player player = (Player) sender;
-                        if (player.equals(setupPlayer)) {
-                            // Clear the setup tool
-                            ItemStack itemInHand = player.getInventory().getItemInMainHand();
-                            if (itemInHand.getType() == Material.DIAMOND_AXE && Objects.requireNonNull(itemInHand.getItemMeta()).getDisplayName().equals(ChatColor.GOLD + "" + ChatColor.BOLD + "StyleLabor Mine - Setup")) {
-                                player.getInventory().remove(itemInHand);
-                            }
-
-                            // Set the region defined by the corners to air and then fill it with blocks based on the percentages in config.yml
-                            if (corner1 != null && corner2 != null) {
-                                // Get the block types and their percentages from config.yml
-                                ConfigurationSection blocksSection = getConfig().getConfigurationSection("blocks");
-                                if (blocksSection != null) {
-                                    @SuppressWarnings("DuplicatedCode") List<Material> materials = new ArrayList<>();
-                                    //noinspection DuplicatedCode
-                                    for (String key : blocksSection.getKeys(false)) {
-                                        Material material = Material.getMaterial(key);
-                                        int percentage = blocksSection.getInt(key);
-                                        for (int i = 0; i < percentage; i++) {
-                                            materials.add(material);
-                                        }
-                                    }
-
-                                    // Fill the region with blocks
-                                    for (int x = Math.min(corner1.getBlockX(), corner2.getBlockX()); x <= Math.max(corner1.getBlockX(), corner2.getBlockX()); x++) {
-                                        for (int y = Math.min(corner1.getBlockY(), corner2.getBlockY()); y <= Math.max(corner1.getBlockY(), corner2.getBlockY()); y++) {
-                                            for (int z = Math.min(corner1.getBlockZ(), corner2.getBlockZ()); z <= Math.max(corner1.getBlockZ(), corner2.getBlockZ()); z++) {
-                                                Material material = materials.get(new Random().nextInt(materials.size()));
-                                                new Location(corner1.getWorld(), x, y, z).getBlock().setType(material);
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    return true;
-                }
-
-                if (args[0].equalsIgnoreCase("bypassprotection")) {
-                    if (sender instanceof Player) {
-                        Player player = (Player) sender;
-                        if (player.isOp()) {
-                            if (bypassProtectionPlayers.contains(player.getUniqueId())) {
-                                bypassProtectionPlayers.remove(player.getUniqueId());
-                                player.sendMessage("Bypass protection disabled.");
-                            } else {
-                                bypassProtectionPlayers.add(player.getUniqueId());
-                                player.sendMessage("Bypass protection enabled.");
-                            }
-                        } else {
-                            player.sendMessage("You do not have permission to perform this command.");
-                        }
-                    }
-                    return true;
+                    case "finish":
+                        handleFinishCommand(sender, args);
+                        return true;
+                    case "bypassprotection":
+                        handleBypassProtectionCommand(sender, args);
+                        return true;
+                    default:
+                        sender.sendMessage("Unknown command.");
+                        return false;
                 }
             }
         }
         return false;
     }
+
+    private void handleSetSpawnCommand(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player)) {
+            sender.sendMessage("This command can only be used by a player.");
+            return;
+        }
+        if (args.length < 3) {
+            sender.sendMessage("You need to add a yaw and a pitch. Usage: /stylelabormine setspawn <pitch> <yaw>");
+            return;
+        }
+        Player player = (Player) sender;
+        float pitch = Float.parseFloat(args[1]);
+        float yaw = Float.parseFloat(args[2]);
+        settingSpawnPlayers.put(player.getUniqueId(), new float[]{pitch, yaw});
+        player.sendMessage("Click on a block to set the spawn location.");
+    }
+
+    private void handleTpSurfaceCommand(CommandSender sender, String[] ignoredArgs1) {
+        if (!(sender instanceof Player)) {
+            sender.sendMessage("This command can only be used by a player.");
+            return;
+        }
+        Player player = (Player) sender;
+        Location location = player.getLocation();
+        while (location.getBlock().getType() != Material.AIR) {
+            location.add(0, 1, 0);
+        }
+        player.teleport(location);
+        player.sendMessage("Teleported to the surface.");
+    }
+
+    private void handleCoinsCommand(CommandSender sender, String[] args) {
+        if (args.length < 3) {
+            sender.sendMessage(getMessage("coins.usage"));
+            return;
+        }
+
+        String operation = args[1];
+        Player targetPlayer = getServer().getPlayer(args[2]);
+
+        if (targetPlayer == null) {
+            sender.sendMessage(getMessage("coins.player_not_found"));
+            return;
+        }
+
+        int amount;
+
+        switch (operation.toLowerCase()) {
+            case "set":
+            case "add":
+            case "subtract":
+                if (args.length < 4) {
+                    sender.sendMessage(getMessage("coins.usage"));
+                    return;
+                }
+
+                try {
+                    amount = Integer.parseInt(args[3]);
+                } catch (NumberFormatException e) {
+                    sender.sendMessage(getMessage("coins.invalid_amount"));
+                    return;
+                }
+
+                switch (operation.toLowerCase()) {
+                    case "set":
+                        setCoins(targetPlayer, amount);
+                        sender.sendMessage(getMessage("coins.set_coins", targetPlayer.getName(), amount));
+                        break;
+                    case "add":
+                        addCoins(targetPlayer, amount);
+                        sender.sendMessage(getMessage("coins.add_coins", amount, targetPlayer.getName()));
+                        break;
+                    case "subtract":
+                        subtractCoins(targetPlayer, amount);
+                        sender.sendMessage(getMessage("coins.subtract_coins", amount, targetPlayer.getName()));
+                        break;
+                }
+                break;
+            case "lookup":
+                int coins = getCoins(targetPlayer);
+                sender.sendMessage(getMessage("coins.lookup_coins", targetPlayer.getName(), coins));
+                break;
+            case "command":
+                if (args.length < 5) {
+                    sender.sendMessage("Usage: /stylelabormine coins command <player> <amount> <command>");
+                    return;
+                }
+
+                try {
+                    amount = Integer.parseInt(args[3]);
+                } catch (NumberFormatException e) {
+                    sender.sendMessage(getMessage("coins.invalid_amount"));
+                    return;
+                }
+
+                if (getCoins(targetPlayer) >= amount) {
+                    subtractCoins(targetPlayer, amount);
+                    String[] commands = String.join(" ", Arrays.copyOfRange(args, 4, args.length)).split("&&");
+                    for (String commandToExecute : commands) {
+                        getServer().dispatchCommand(getServer().getConsoleSender(), commandToExecute.replace("%player%", targetPlayer.getName()));
+                    }
+                } else {
+                    sender.sendMessage("Player does not have enough coins.");
+                }
+                break;
+            default:
+                sender.sendMessage(getMessage("coins.invalid_operation"));
+                break;
+        }
+    }
+
+    private void handleDatabaseTestCommand(CommandSender sender, String[] ignoredArgs) {
+        if (!(sender instanceof Player)) {
+            sender.sendMessage("This command can only be used by a player.");
+            return;
+        }
+        Player player = (Player) sender;
+        if (player.isOp()) {
+            try {
+                if (connection != null && !connection.isClosed()) {
+                    player.sendMessage("Database connection is active.");
+                } else {
+                    player.sendMessage("Database connection is not active.");
+                }
+            } catch (SQLException e) {
+                player.sendMessage("An error occurred while checking the database connection.");
+            }
+        } else {
+            player.sendMessage("You do not have permission to perform this command.");
+        }
+    }
+
+    private void handleSetupCommand(CommandSender sender, String[] ignoredArgs1) {
+        if (!(sender instanceof Player)) {
+            sender.sendMessage("This command can only be used by a player.");
+            return;
+        }
+        Player player = (Player) sender;
+        if (player.isOp()) {
+            setupPlayer = player;
+            ItemStack item = new ItemStack(Material.DIAMOND_AXE);
+            ItemMeta meta = item.getItemMeta();
+
+            if (meta != null) {
+                meta.setDisplayName(ChatColor.GOLD + "" + ChatColor.BOLD + "StyleLabor Mine - Setup");
+                meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+                item.setItemMeta(meta);
+            }
+
+            if (player.getInventory().firstEmpty() != -1) {
+                player.getInventory().addItem(item);
+                player.sendMessage("Setup mode enabled. Use the diamond axe to select the corners of the mine.");
+            } else {
+                player.sendMessage("Your inventory is full. Please clear a space and try again.");
+            }
+        } else {
+            player.sendMessage("You do not have permission to perform this command.");
+        }
+    }
+
+
+    private void handleFinishCommand(CommandSender sender, String[] ignoredArgs) {
+        if (!(sender instanceof Player)) {
+            sender.sendMessage("This command can only be used by a player.");
+            return;
+        }
+        Player player = (Player) sender;
+        if (player.isOp()) {
+            if (corner1 != null && corner2 != null) {
+                regenerateMineRegion();
+                player.sendMessage("Mine setup finished and area cleared.");
+                setupPlayer = null;
+                corner1 = null;
+                corner2 = null;
+            } else {
+                player.sendMessage("Both corners have not been set.");
+            }
+        } else {
+            player.sendMessage("You do not have permission to perform this command.");
+        }
+    }
+
+    private void handleBypassProtectionCommand(CommandSender sender, String[] ignoredArgs) {
+        if (!(sender instanceof Player)) {
+            sender.sendMessage("This command can only be used by a player.");
+            return;
+        }
+        Player player = (Player) sender;
+        if (player.isOp()) {
+            if (bypassProtectionPlayers.contains(player.getUniqueId())) {
+                bypassProtectionPlayers.remove(player.getUniqueId());
+                player.sendMessage("Bypass protection disabled.");
+            } else {
+                bypassProtectionPlayers.add(player.getUniqueId());
+                player.sendMessage("Bypass protection enabled.");
+            }
+        } else {
+            player.sendMessage("You do not have permission to perform this command.");
+        }
+    }
+
 
     @EventHandler
     public void onPlayerInteract(PlayerInteractEvent event) {
