@@ -63,12 +63,42 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
         // Load messages.yml
         File messagesFile = new File(getDataFolder(), "messages.yml");
         messagesConfig = YamlConfiguration.loadConfiguration(messagesFile);
+        // Load config.yml
+        File configFile = new File(getDataFolder(), "config.yml");
+        YamlConfiguration config = YamlConfiguration.loadConfiguration(configFile);
+
         // Load mysql.yml
         File mysqlFile = new File(getDataFolder(), "mysql.yml");
         if (!mysqlFile.exists()) {
             saveResource("mysql.yml", false);
         }
         FileConfiguration mysqlConfig = YamlConfiguration.loadConfiguration(mysqlFile);
+
+        // Register the PlayerJoinEvent
+        getServer().getPluginManager().registerEvents(new Listener() {
+            @EventHandler
+            public void onPlayerJoin(PlayerJoinEvent event) {
+                System.out.println("Player joined: " + event.getPlayer().getName()); // Debug message
+
+                // Check if the giveNightVision option is true
+                if (config.getBoolean("giveNightVision", false)) {
+                    Player player = event.getPlayer();
+                    player.addPotionEffect(new PotionEffect(PotionEffectType.NIGHT_VISION, Integer.MAX_VALUE, 0, true, false, false));
+                }
+
+                // Load data.yml
+                File dataFile = new File(getDataFolder(), "data.yml");
+                YamlConfiguration dataConfig = YamlConfiguration.loadConfiguration(dataFile);
+
+                // Get the spawn location from data.yml
+                String spawnLocationString = dataConfig.getString("spawnLocation");
+                if (spawnLocationString != null) {
+                    Location spawnLocation = stringToLocation(spawnLocationString);
+                    event.getPlayer().teleport(spawnLocation);
+                }
+
+            }
+        }, this);
 
         // Disable hunger if the setting is true
         if (getConfig().getBoolean("disableHunger", false)) {
@@ -191,36 +221,6 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
 
         // Regenerate the mine region
         regenerateMineRegion();
-
-        // Register the PlayerJoinEvent
-        getServer().getPluginManager().registerEvents(new Listener() {
-            @EventHandler
-            public void onPlayerJoin(PlayerJoinEvent event) {
-                System.out.println("Player joined: " + event.getPlayer().getName()); // Debug message
-
-                // Load config.yml
-                File configFile = new File(getDataFolder(), "config.yml");
-                YamlConfiguration config = YamlConfiguration.loadConfiguration(configFile);
-
-                // Check if the giveNightVision option is true
-                if (config.getBoolean("giveNightVision", false)) {
-                    Player player = event.getPlayer();
-                    player.addPotionEffect(new PotionEffect(PotionEffectType.NIGHT_VISION, Integer.MAX_VALUE, 0, true, false, false));
-                }
-
-                // Load data.yml
-                File dataFile = new File(getDataFolder(), "data.yml");
-                YamlConfiguration dataConfig = YamlConfiguration.loadConfiguration(dataFile);
-
-                // Get the spawn location from data.yml
-                String spawnLocationString = dataConfig.getString("spawnLocation");
-                if (spawnLocationString != null) {
-                    Location spawnLocation = stringToLocation(spawnLocationString);
-                    event.getPlayer().teleport(spawnLocation);
-                }
-
-            }
-        }, this);
 
     }
 
@@ -708,6 +708,9 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
 
     public Location stringToLocation(String s) {
         String[] parts = s.split(",");
+        if (parts.length < 4) {
+            throw new IllegalArgumentException("Invalid location string: " + s);
+        }
         double x = Double.parseDouble(parts[0].split("=")[1]);
         double y = Double.parseDouble(parts[1].split("=")[1]);
         double z = Double.parseDouble(parts[2].split("=")[1]);
