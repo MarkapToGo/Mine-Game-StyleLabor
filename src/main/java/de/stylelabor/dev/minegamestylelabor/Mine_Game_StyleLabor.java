@@ -33,7 +33,6 @@ import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-
 public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, TabCompleter {
 
     private Player setupPlayer = null;
@@ -111,7 +110,6 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
             }
         }
 
-
         // Set up the database
         setupDatabase();
 
@@ -119,7 +117,6 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
         getServer().getPluginManager().registerEvents(this, this);
         Objects.requireNonNull(getCommand("stylelabormine")).setExecutor(this);
         Objects.requireNonNull(getCommand("stylelabormine")).setTabCompleter(this);
-
 
         // Disable weather if the setting is true
         if (getConfig().getBoolean("disableWeather", false)) {
@@ -178,8 +175,6 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
             coinUpdateTask.cancel();
         }
     }
-
-
 
     @SuppressWarnings("DuplicatedCode")
     private void regenerateMineRegion() {
@@ -248,7 +243,6 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
                     }
                     return true;
                 }
-
 
                 if (args[0].equalsIgnoreCase("tpsurface")) {
                     if (sender instanceof Player) {
@@ -343,7 +337,6 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
                     return true;
                 }
             }
-
 
             if (args.length > 0) {
                 if (args[0].equalsIgnoreCase("database-test")) {
@@ -460,7 +453,6 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
                 }
             }
         }
-
         return false;
     }
 
