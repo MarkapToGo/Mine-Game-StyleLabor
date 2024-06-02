@@ -2,8 +2,12 @@
 clickDelay: 14
 disableWeather: true
 disableTimeCycle: true
+giveNightVision: true # set to false to disable night vision
+disableHunger: true # set to false to enable hunger
 debug: false # set to true to enable debug messages
 disableMobSpawn: true
+startupTime: 6000 # set to desired startup time (6000 is noon)
+startupWeather: clear # set to desired startup weather (clear, rain, or thunder)
 disablePlayerDamage: true # set to false to enable player damage
 coinUpdateFrequency: 5 # in seconds
 regenDelay: 5 # in seconds

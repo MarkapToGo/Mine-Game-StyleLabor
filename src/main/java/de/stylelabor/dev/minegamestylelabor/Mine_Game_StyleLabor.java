@@ -6,6 +6,8 @@ import org.bstats.bukkit.Metrics;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.command.Command;
+import org.bukkit.event.entity.FoodLevelChangeEvent;
+import org.bukkit.potion.PotionEffect;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.configuration.ConfigurationSection;
@@ -23,6 +25,7 @@ import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 import org.jetbrains.annotations.NotNull;
@@ -67,6 +70,16 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
         }
         FileConfiguration mysqlConfig = YamlConfiguration.loadConfiguration(mysqlFile);
 
+        // Disable hunger if the setting is true
+        if (getConfig().getBoolean("disableHunger", false)) {
+            getServer().getPluginManager().registerEvents(new Listener() {
+                @EventHandler
+                public void onFoodLevelChange(FoodLevelChangeEvent event) {
+                    event.setCancelled(true);
+                }
+            }, this);
+        }
+
         // Initialize the database connection
         try {
             String hostname = mysqlConfig.getString("hostname");
@@ -100,6 +113,36 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
                 }
             }
         }.runTaskTimer(this, 0, coinUpdateFrequency * 20L); // Convert seconds to ticks
+
+
+        // Set startup time if the setting is present
+        if (getConfig().contains("startupTime")) {
+            long startupTime = getConfig().getLong("startupTime");
+            for (World world : getServer().getWorlds()) {
+                world.setTime(startupTime);
+            }
+        }
+
+        // Set startup weather if the setting is present
+        if (getConfig().contains("startupWeather")) {
+            String startupWeather = getConfig().getString("startupWeather");
+            for (World world : getServer().getWorlds()) {
+                switch (Objects.requireNonNull(startupWeather).toLowerCase()) {
+                    case "clear":
+                        world.setStorm(false);
+                        world.setThundering(false);
+                        break;
+                    case "rain":
+                        world.setStorm(true);
+                        world.setThundering(false);
+                        break;
+                    case "thunder":
+                        world.setStorm(true);
+                        world.setThundering(true);
+                        break;
+                }
+            }
+        }
 
         // Load corners from data.yml
         File dataFile = new File(getDataFolder(), "data.yml");
@@ -154,6 +197,16 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
             @EventHandler
             public void onPlayerJoin(PlayerJoinEvent event) {
                 System.out.println("Player joined: " + event.getPlayer().getName()); // Debug message
+
+                // Load config.yml
+                File configFile = new File(getDataFolder(), "config.yml");
+                YamlConfiguration config = YamlConfiguration.loadConfiguration(configFile);
+
+                // Check if the giveNightVision option is true
+                if (config.getBoolean("giveNightVision", false)) {
+                    Player player = event.getPlayer();
+                    player.addPotionEffect(new PotionEffect(PotionEffectType.NIGHT_VISION, Integer.MAX_VALUE, 0, true, false, false));
+                }
 
                 // Load data.yml
                 File dataFile = new File(getDataFolder(), "data.yml");
@@ -653,15 +706,13 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
         }
     }
 
-    private Location stringToLocation(String string) {
-        String[] parts = string.split(",");
-        World world = getServer().getWorld(parts[0]);
-        double x = Double.parseDouble(parts[1]);
-        double y = Double.parseDouble(parts[2]);
-        double z = Double.parseDouble(parts[3]);
-        float pitch = Float.parseFloat(parts[4]);
-        float yaw = Float.parseFloat(parts[5]);
-        return new Location(world, x, y, z, yaw, pitch);
+    public Location stringToLocation(String s) {
+        String[] parts = s.split(",");
+        double x = Double.parseDouble(parts[0].split("=")[1]);
+        double y = Double.parseDouble(parts[1].split("=")[1]);
+        double z = Double.parseDouble(parts[2].split("=")[1]);
+        World world = Bukkit.getWorld(parts[3].split("=")[1]);
+        return new Location(world, x, y, z);
     }
 
     private void giveCoins(Player player, int amount) {
