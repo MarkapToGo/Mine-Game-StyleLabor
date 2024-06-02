@@ -237,7 +237,7 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
                                 dataConfig.save(dataFile);
                             } catch (IOException e) {
                                 player.sendMessage("Failed to save spawn location.");
-                                e.printStackTrace();
+                                LOGGER.log(Level.SEVERE, "Failed to save spawn location.", e);
                             }
                             player.sendMessage("Spawn location set.");
                         } else {
