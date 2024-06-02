@@ -9,8 +9,8 @@ disableMobSpawn: true
 startupTime: 6000 # set to desired startup time (6000 is noon)
 startupWeather: clear # set to desired startup weather (clear, rain, or thunder)
 disablePlayerDamage: true # set to false to enable player damage
-coinUpdateFrequency: 5 # in seconds
-regenDelay: 5 # in seconds
+coinUpdateFrequency: 3 # in seconds
+regenDelay: 45 # in seconds
 blocks:
   STONE: 75
   IRON_ORE: 10
