@@ -2,6 +2,7 @@ package de.stylelabor.dev.minegamestylelabor;
 
 import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.TextComponent;
+import org.bstats.bukkit.Metrics;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.command.Command;
@@ -47,8 +48,12 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
     private FileConfiguration messagesConfig;
     private BukkitTask coinUpdateTask;
 
+    @SuppressWarnings("unused")
     @Override
     public void onEnable() {
+        //bStats Metrics
+        int pluginId = 22115;
+        Metrics metrics = new Metrics(this, pluginId);
         // Ensures that a config.yml file exists. If it doesn't, the plugin copies the default one included in the JAR file.
         saveDefaultConfig();
         saveResource("messages.yml", false);
