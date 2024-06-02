@@ -653,6 +653,12 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
         // Prevent the block from dropping items
         event.setDropItems(false);
 
+        // Check if the block is stone or an ore
+        //if (block.getType() == Material.STONE || block.getType() == Material.DIAMOND_ORE || block.getType() == Material.GOLD_ORE || block.getType() == Material.IRON_ORE) {
+            // Manually play the block break sound
+           // block.getWorld().playSound(block.getLocation(), block.getBlockData().getSoundGroup().getBreakSound(), 1.0f, 1.0f);
+      //  }
+
         // Get the block type
         Material blockType = event.getBlock().getType();
 
@@ -681,6 +687,7 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
                             materials.add(material);
                         }
                     }
+
 
                     // Replace the broken block with a new block based on the percentages
                     Material material = materials.get(new Random().nextInt(materials.size()));
