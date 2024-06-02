@@ -11,6 +11,7 @@ startupWeather: clear # set to desired startup weather (clear, rain, or thunder)
 disablePlayerDamage: true # set to false to enable player damage
 coinUpdateFrequency: 3 # in seconds
 regenDelay: 45 # in seconds
+saveInventory: true # set to false to disable inventory saving | inventory will be saved in mysql
 blocks:
   STONE: 75
   IRON_ORE: 10

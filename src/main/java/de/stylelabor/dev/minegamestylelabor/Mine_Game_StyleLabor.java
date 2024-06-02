@@ -7,6 +7,9 @@ import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.command.Command;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
+import org.bukkit.event.player.PlayerKickEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.server.PluginDisableEvent;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
@@ -28,8 +31,12 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.util.io.BukkitObjectInputStream;
+import org.bukkit.util.io.BukkitObjectOutputStream;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.sql.*;
@@ -140,6 +147,75 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
             statement.executeUpdate();
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "An exception was thrown!", e);
+        }
+
+
+        // Create the inventory table
+        try {
+            PreparedStatement statement = connection.prepareStatement(
+                    "CREATE TABLE IF NOT EXISTS inventories (" +
+                            "uuid VARCHAR(36) NOT NULL," +
+                            "slot INT NOT NULL," +
+                            "item_type VARCHAR(255) NOT NULL," +
+                            "item_amount INT NOT NULL," +
+                            "item_meta BLOB," +
+                            "PRIMARY KEY (uuid, slot)" +
+                            ")"
+            );
+            statement.executeUpdate();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "An exception was thrown!", e);
+        }
+
+        if (getConfig().getBoolean("saveInventory", false)) {
+            getServer().getPluginManager().registerEvents(new Listener() {
+                @EventHandler
+                public void onPlayerJoin(PlayerJoinEvent event) {
+                    Player player = event.getPlayer();
+                    // Clear the player's inventory before loading the new one
+                    player.getInventory().clear();
+                    // Load the player's inventory from the database
+                    try {
+                        PreparedStatement statement = connection.prepareStatement("SELECT slot, item_type, item_amount, item_meta FROM inventories WHERE uuid = ?");
+                        statement.setString(1, player.getUniqueId().toString());
+                        ResultSet resultSet = statement.executeQuery();
+                        while (resultSet.next()) {
+                            int slot = resultSet.getInt("slot");
+                            Material type = Material.getMaterial(resultSet.getString("item_type"));
+                            int amount = resultSet.getInt("item_amount");
+                            byte[] itemMeta = resultSet.getBytes("item_meta");
+                            ByteArrayInputStream bais = new ByteArrayInputStream(itemMeta);
+                            BukkitObjectInputStream bois = new BukkitObjectInputStream(bais);
+                            ItemStack item = (ItemStack) bois.readObject();
+                            player.getInventory().setItem(slot, item);
+                        }
+                    } catch (SQLException | IOException | ClassNotFoundException e) {
+                        LOGGER.log(Level.SEVERE, "An exception was thrown!", e);
+                    }
+                }
+
+                @EventHandler
+                public void onPlayerQuit(PlayerQuitEvent event) {
+                    // Save the player's inventory
+                    saveInventory(event.getPlayer());
+                }
+
+                @EventHandler
+                public void onPlayerKick(PlayerKickEvent event) {
+                    // Save the player's inventory when they are kicked
+                    saveInventory(event.getPlayer());
+                }
+            }, this);
+
+            getServer().getPluginManager().registerEvents(new Listener() {
+                @EventHandler
+                public void onPluginDisable(PluginDisableEvent event) {
+                    // Step 7: Save all online players' inventories when the server stops
+                    for (Player player : Bukkit.getOnlinePlayers()) {
+                        saveInventory(player);
+                    }
+                }
+            }, this);
         }
 
         // Start the coin update task
@@ -831,6 +907,37 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
             statement.setString(2, player.getUniqueId().toString());
             statement.executeUpdate();
         } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "An exception was thrown!", e);
+        }
+    }
+
+
+    // Method to save a player's inventory
+    private void saveInventory(Player player) {
+        try {
+            // Delete the player's current inventory in the database
+            PreparedStatement deleteStatement = connection.prepareStatement("DELETE FROM inventories WHERE uuid = ?");
+            deleteStatement.setString(1, player.getUniqueId().toString());
+            deleteStatement.executeUpdate();
+
+            // Insert the player's current inventory into the database
+            PreparedStatement insertStatement = connection.prepareStatement("INSERT INTO inventories (uuid, slot, item_type, item_amount, item_meta) VALUES (?, ?, ?, ?, ?)");
+            insertStatement.setString(1, player.getUniqueId().toString());
+            for (int i = 0; i < player.getInventory().getSize(); i++) {
+                ItemStack item = player.getInventory().getItem(i);
+                if (item != null) {
+                    insertStatement.setInt(2, i);
+                    insertStatement.setString(3, item.getType().name());
+                    insertStatement.setInt(4, item.getAmount());
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                    BukkitObjectOutputStream boos = new BukkitObjectOutputStream(baos);
+                    boos.writeObject(item);
+                    byte[] itemMeta = baos.toByteArray();
+                    insertStatement.setBytes(5, itemMeta);
+                    insertStatement.executeUpdate();
+                }
+            }
+        } catch (SQLException | IOException e) {
             LOGGER.log(Level.SEVERE, "An exception was thrown!", e);
         }
     }
