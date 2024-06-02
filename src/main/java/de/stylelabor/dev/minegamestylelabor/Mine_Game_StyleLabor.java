@@ -152,6 +152,18 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
             @EventHandler
             public void onPlayerJoin(PlayerJoinEvent event) {
                 System.out.println("Player joined: " + event.getPlayer().getName()); // Debug message
+
+                // Load data.yml
+                File dataFile = new File(getDataFolder(), "data.yml");
+                YamlConfiguration dataConfig = YamlConfiguration.loadConfiguration(dataFile);
+
+                // Get the spawn location from data.yml
+                String spawnLocationString = dataConfig.getString("spawnLocation");
+                if (spawnLocationString != null) {
+                    Location spawnLocation = stringToLocation(spawnLocationString);
+                    event.getPlayer().teleport(spawnLocation);
+                }
+
             }
         }, this);
 
@@ -166,6 +178,7 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
             coinUpdateTask.cancel();
         }
     }
+
 
 
     @SuppressWarnings("DuplicatedCode")
@@ -211,6 +224,32 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
     public boolean onCommand(@NotNull CommandSender sender, Command command, @NotNull String label, String[] args) {
         if (command.getName().equalsIgnoreCase("stylelabormine")) {
             if (args.length > 0) {
+
+                if (args[0].equalsIgnoreCase("setspawn")) {
+                    if (sender instanceof Player) {
+                        Player player = (Player) sender;
+                        if (player.isOp()) {
+                            // Set the spawn location to the player's current location
+                            File dataFile = new File(getDataFolder(), "data.yml");
+                            YamlConfiguration dataConfig = YamlConfiguration.loadConfiguration(dataFile);
+                            dataConfig.set("spawnLocation", player.getLocation().toString());
+                            try {
+                                dataConfig.save(dataFile);
+                            } catch (IOException e) {
+                                player.sendMessage("Failed to save spawn location.");
+                                e.printStackTrace();
+                            }
+                            player.sendMessage("Spawn location set.");
+                        } else {
+                            player.sendMessage("You do not have permission to perform this command.");
+                        }
+                    } else {
+                        sender.sendMessage("This command can only be used by a player.");
+                    }
+                    return true;
+                }
+
+
                 if (args[0].equalsIgnoreCase("tpsurface")) {
                     if (sender instanceof Player) {
                         Player player = (Player) sender;
@@ -291,14 +330,13 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
 
                             if (getCoins(targetPlayer) >= amount) {
                                 subtractCoins(targetPlayer, amount);
-                                String commandToExecute = String.join(" ", Arrays.copyOfRange(args, 4, args.length));
-                                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), commandToExecute);
+                                String[] commands = String.join(" ", Arrays.copyOfRange(args, 4, args.length)).split("&&");
+                                for (String commandToExecute : commands) {
+                                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), commandToExecute.trim());
+                                }
                             } else {
                                 sender.sendMessage("Player does not have enough coins.");
                             }
-                            break;
-                        default:
-                            sender.sendMessage(getMessage("coins.invalid_operation"));
                             break;
                     }
 
@@ -713,7 +751,7 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
     public List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, String[] args) {
         if (command.getName().equalsIgnoreCase("stylelabormine")) {
             if (args.length == 1) {
-                return Arrays.asList("setup", "bypassprotection", "database-test", "coins", "tpsurface");
+                return Arrays.asList("setup", "bypassprotection", "database-test", "coins", "tpsurface", "setspawn");
             } else if (args.length == 2 && args[0].equalsIgnoreCase("coins")) {
                 return Arrays.asList("set", "add", "subtract", "lookup");
             } else if (args.length == 3 && args[0].equalsIgnoreCase("coins")) {
