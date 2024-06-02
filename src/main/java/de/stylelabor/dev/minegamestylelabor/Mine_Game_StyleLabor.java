@@ -50,6 +50,7 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
     private static final Logger LOGGER = Logger.getLogger(Mine_Game_StyleLabor.class.getName());
     private FileConfiguration messagesConfig;
     private BukkitTask coinUpdateTask;
+    private final Map<UUID, float[]> settingSpawnPlayers = new HashMap<>();
 
     @SuppressWarnings("unused")
     @Override
@@ -95,6 +96,15 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
                 if (spawnLocationString != null) {
                     Location spawnLocation = stringToLocation(spawnLocationString);
                     event.getPlayer().teleport(spawnLocation);
+                }
+
+                // Save the spawn location to data.yml
+                Location spawnLocation = event.getPlayer().getLocation();
+                dataConfig.set("spawnLocation", Objects.requireNonNull(spawnLocation.getWorld()).getName() + "," + spawnLocation.getX() + "," + spawnLocation.getY() + "," + spawnLocation.getZ());
+                try {
+                    dataConfig.save(dataFile);
+                } catch (IOException e) {
+                    LOGGER.log(Level.SEVERE, "An exception was thrown!", e);
                 }
 
             }
@@ -280,26 +290,19 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
 
                 //setspawn command
                 if (args[0].equalsIgnoreCase("setspawn")) {
-                    if (sender instanceof Player) {
-                        Player player = (Player) sender;
-                        if (player.isOp()) {
-                            // Set the spawn location to the player's current location
-                            File dataFile = new File(getDataFolder(), "data.yml");
-                            YamlConfiguration dataConfig = YamlConfiguration.loadConfiguration(dataFile);
-                            dataConfig.set("spawnLocation", player.getLocation().toString());
-                            try {
-                                dataConfig.save(dataFile);
-                            } catch (IOException e) {
-                                player.sendMessage("Failed to save spawn location.");
-                                LOGGER.log(Level.SEVERE, "Failed to save spawn location.", e);
-                            }
-                            player.sendMessage("Spawn location set.");
-                        } else {
-                            player.sendMessage("You do not have permission to perform this command.");
-                        }
-                    } else {
+                    if (!(sender instanceof Player)) {
                         sender.sendMessage("This command can only be used by a player.");
+                        return true;
                     }
+                    if (args.length < 3) {
+                        sender.sendMessage("You need to add a yaw and a pitch. Usage: /stylelabormine setspawn <pitch> <yaw>");
+                        return true;
+                    }
+                    Player player = (Player) sender;
+                    float pitch = Float.parseFloat(args[1]);
+                    float yaw = Float.parseFloat(args[2]);
+                    settingSpawnPlayers.put(player.getUniqueId(), new float[]{pitch, yaw});
+                    player.sendMessage("Click on a block to set the spawn location.");
                     return true;
                 }
 
@@ -522,6 +525,28 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
 
     @EventHandler
     public void onPlayerInteract(PlayerInteractEvent event) {
+
+        if (settingSpawnPlayers.containsKey(event.getPlayer().getUniqueId())) {
+            if (event.getAction() == Action.LEFT_CLICK_BLOCK || event.getAction() == Action.RIGHT_CLICK_BLOCK) {
+                Location spawnLocation = Objects.requireNonNull(event.getClickedBlock()).getLocation().add(0, 1, 0);
+                float[] pitchAndYaw = settingSpawnPlayers.get(event.getPlayer().getUniqueId());
+                spawnLocation.setPitch(pitchAndYaw[0]);
+                spawnLocation.setYaw(pitchAndYaw[1]);
+                // Save spawnLocation to data.yml
+                File dataFile = new File(getDataFolder(), "data.yml");
+                YamlConfiguration dataConfig = YamlConfiguration.loadConfiguration(dataFile);
+                dataConfig.set("spawnLocation", locationToString(spawnLocation));
+                try {
+                    dataConfig.save(dataFile);
+                } catch (IOException e) {
+                    LOGGER.log(Level.SEVERE, "An exception was thrown!", e);
+                }
+                event.getPlayer().sendMessage("Spawn location set at " + spawnLocation.getBlockX() + ", " + spawnLocation.getBlockY() + ", " + spawnLocation.getBlockZ());
+                settingSpawnPlayers.remove(event.getPlayer().getUniqueId());
+            }
+            event.setCancelled(true);
+        }
+
         if (event.getPlayer().equals(setupPlayer)) {
             ItemStack itemInHand = event.getPlayer().getInventory().getItemInMainHand();
             if (itemInHand.getType() != Material.DIAMOND_AXE || !Objects.requireNonNull(itemInHand.getItemMeta()).getDisplayName().equals(ChatColor.GOLD + "" + ChatColor.BOLD + "StyleLabor Mine - Setup")) {
@@ -711,10 +736,19 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
         if (parts.length < 4) {
             throw new IllegalArgumentException("Invalid location string: " + s);
         }
-        double x = Double.parseDouble(parts[0].split("=")[1]);
-        double y = Double.parseDouble(parts[1].split("=")[1]);
-        double z = Double.parseDouble(parts[2].split("=")[1]);
-        World world = Bukkit.getWorld(parts[3].split("=")[1]);
+        World world = Bukkit.getWorld(parts[0].substring(parts[0].indexOf("=") + 1));
+        double x = Double.parseDouble(parts[1].substring(parts[1].indexOf("=") + 1));
+        double y = Double.parseDouble(parts[2].substring(parts[2].indexOf("=") + 1));
+        double z = Double.parseDouble(parts[3].substring(parts[3].indexOf("=") + 1));
+
+        // If pitch and yaw are provided, use them
+        if (parts.length >= 6) {
+            float pitch = Float.parseFloat(parts[4].substring(parts[4].indexOf("=") + 1, parts[4].length() - 1));
+            float yaw = Float.parseFloat(parts[5].substring(parts[5].indexOf("=") + 1, parts[5].length() - 1));
+            return new Location(world, x, y, z, yaw, pitch);
+        }
+
+        // Otherwise, return a location without pitch and yaw
         return new Location(world, x, y, z);
     }
 
