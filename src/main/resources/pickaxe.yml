@@ -4,6 +4,9 @@ pickaxes:
     cost: 50
     tier: 1
     giveCommand: "give %player% minecraft:wooden_pickaxe{Enchantments:[{id:unbreaking,lvl:1}]}"
+    commands:
+      - "time set day"
+      - "clear %player%"
   super_pickaxe:
     name: "Super Pickaxe"
     cost: 100

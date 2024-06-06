@@ -39,3 +39,5 @@ blockCoins:
 #       disable-saving: true
 #       disabled:
 #       - "*"
+
+# The mine should be over -60 because there command blocks are placed to execute longer give commands

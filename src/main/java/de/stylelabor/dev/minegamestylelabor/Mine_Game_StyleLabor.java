@@ -5,6 +5,7 @@ import net.md_5.bungee.api.chat.TextComponent;
 import org.bstats.bukkit.Metrics;
 import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.block.CommandBlock;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
@@ -16,6 +17,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockRedstoneEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -447,7 +449,7 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
 
 
 
-    private void buyPickaxe(CommandSender sender, String[] args) {
+    private synchronized void buyPickaxe(CommandSender sender, String[] args) {
         if (args.length < 2) {
             sender.sendMessage("Usage: /stylelabormine buy <pickaxe>");
             return;
@@ -482,7 +484,20 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
 
         String giveCommand = Objects.requireNonNull(pickaxe.getString("giveCommand")).replace("%player%", player.getName());
 
-        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), giveCommand);
+        // Create a command block with the give command
+        Location location = player.getLocation();
+        location.setY(-60); // Set the y-coordinate to 0 to avoid interfering with the world
+        Block block = location.getBlock();
+        block.setType(Material.COMMAND_BLOCK);
+        CommandBlock commandBlock = (CommandBlock) block.getState();
+        commandBlock.setCommand(giveCommand);
+
+        // Activate the command block
+        BlockRedstoneEvent event = new BlockRedstoneEvent(block, 0, 15);
+        Bukkit.getPluginManager().callEvent(event);
+
+        // Remove the command block
+        block.setType(Material.AIR);
 
         // Execute the additional commands
         List<String> commands = pickaxe.getStringList("commands");
