@@ -1,11 +1,16 @@
 #CONFIGURATION FILE
 clickDelay: 14
-disableWeather: true
-disableTimeCycle: true
+disableWeather: true # set to false to enable weather
+disableTimeCycle: true # set to false to enable time cycle
 giveNightVision: true # set to false to disable night vision
 disableHunger: true # set to false to enable hunger
 debug: false # set to true to enable debug messages
-disableMobSpawn: true
+disableMobSpawn: true # set to false to enable mob spawn
+
+coinReceivedSound: ENTITY_PLAYER_LEVELUP # set to desired sound (https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Sound.html)
+coinReceivedSoundVolume: 1.0
+coinReceivedSoundPitch: 1.0
+
 startupTime: 6000 # set to desired startup time (6000 is noon)
 startupWeather: clear # set to desired startup weather (clear, rain, or thunder)
 disablePlayerDamage: true # set to false to enable player damage
@@ -28,3 +33,9 @@ blockCoins:
   GOLD_BLOCK: 10
   DIAMOND_BLOCK: 12
   EMERALD_BLOCK: 50
+
+# To disable achievements, disable it in the spigot.yml file
+#     advancements:
+#       disable-saving: true
+#       disabled:
+#       - "*"

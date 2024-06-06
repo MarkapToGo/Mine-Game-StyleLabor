@@ -6,28 +6,29 @@ import org.bstats.bukkit.Metrics;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.command.Command;
-import org.bukkit.event.entity.FoodLevelChangeEvent;
-import org.bukkit.event.player.PlayerKickEvent;
-import org.bukkit.event.player.PlayerQuitEvent;
-import org.bukkit.event.server.PluginDisableEvent;
-import org.bukkit.potion.PotionEffect;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerKickEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.server.PluginDisableEvent;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
@@ -46,18 +47,20 @@ import java.util.logging.Logger;
 
 public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, TabCompleter {
 
+    private static final Logger LOGGER = Logger.getLogger(Mine_Game_StyleLabor.class.getName());
+    // Add a new Set to store the players who have bypass protection enabled
+    private final Set<UUID> bypassProtectionPlayers = new HashSet<>();
+    private final Map<UUID, float[]> settingSpawnPlayers = new HashMap<>();
     private Player setupPlayer = null;
     private Location corner1 = null;
     private Location corner2 = null;
     private long lastClickTime = 0;
-    // Add a new Set to store the players who have bypass protection enabled
-    private final Set<UUID> bypassProtectionPlayers = new HashSet<>();
     // Add a field for the database connection
     private Connection connection;
-    private static final Logger LOGGER = Logger.getLogger(Mine_Game_StyleLabor.class.getName());
     private FileConfiguration messagesConfig;
     private BukkitTask coinUpdateTask;
-    private final Map<UUID, float[]> settingSpawnPlayers = new HashMap<>();
+    // pickaxe
+    private Map<String, Map<String, Object>> pickaxes;
 
     @SuppressWarnings("unused")
     @Override
@@ -81,6 +84,24 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
             saveResource("mysql.yml", false);
         }
         FileConfiguration mysqlConfig = YamlConfiguration.loadConfiguration(mysqlFile);
+
+        // Load pickaxe.yml
+        File pickaxeFile = new File(getDataFolder(), "pickaxe.yml");
+        if (!pickaxeFile.exists()) {
+            saveResource("pickaxe.yml", false);
+        }
+        FileConfiguration pickaxeConfig = YamlConfiguration.loadConfiguration(pickaxeFile);
+
+        // Initialize pickaxes
+        pickaxes = new HashMap<>();
+
+        // Get the pickaxes
+        ConfigurationSection pickaxeSection = pickaxeConfig.getConfigurationSection("pickaxes");
+        if (pickaxeSection != null) {
+            for (String key : pickaxeSection.getKeys(false)) {
+                pickaxes.put(key, Objects.requireNonNull(pickaxeSection.getConfigurationSection(key)).getValues(true));
+            }
+        }
 
         // Register the PlayerJoinEvent
         getServer().getPluginManager().registerEvents(new Listener() {
@@ -382,6 +403,9 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
                     case "finish":
                         handleFinishCommand(sender, args);
                         return true;
+                    case "buy":
+                        buyPickaxe(sender, args);
+                        return true;
                     case "bypassprotection":
                         handleBypassProtectionCommand(sender, args);
                         return true;
@@ -393,6 +417,54 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
         }
         return false;
     }
+
+
+    private void buyPickaxe(CommandSender sender, String[] args) {
+        if (args.length < 2) {
+            sender.sendMessage("Usage: /stylelabormine buy <pickaxe>");
+            return;
+        }
+
+        String pickaxeName = args[1];
+        ConfigurationSection pickaxe = (ConfigurationSection) pickaxes.get(pickaxeName);
+
+        if (pickaxe == null) {
+            sender.sendMessage("Invalid pickaxe. Available pickaxes: " + String.join(", ", pickaxes.keySet()));
+            return;
+        }
+
+        Player player = (Player) sender;
+        int cost = pickaxe.getInt("cost");
+        if (getCoins(player) < cost) {
+            sender.sendMessage("You do not have enough coins to buy this pickaxe.");
+            return;
+        }
+
+        subtractCoins(player, cost);
+
+        ItemStack item = new ItemStack(Material.valueOf(pickaxe.getString("material")));
+        ItemMeta meta = item.getItemMeta();
+
+
+        if (meta != null) {
+            meta.setDisplayName(pickaxe.getString("name"));
+            ConfigurationSection enchantments = pickaxe.getConfigurationSection("enchantments");
+            if (enchantments != null) {
+                for (String key : enchantments.getKeys(false)) {
+                    //noinspection deprecation
+                    Enchantment enchantmentType = Enchantment.getByKey(NamespacedKey.minecraft(key.toLowerCase()));
+                    if (enchantmentType != null) {
+                        meta.addEnchant(enchantmentType, enchantments.getInt(key), true);
+                    }
+                }
+            }
+            item.setItemMeta(meta);
+        }
+
+        player.getInventory().addItem(item);
+        sender.sendMessage("You have bought a " + pickaxe.getString("name") + " for " + cost + " coins.");
+    }
+
 
     private void handleSetSpawnCommand(CommandSender sender, String[] args) {
         if (!(sender instanceof Player)) {
@@ -839,9 +911,16 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
                 updateStatement.setString(2, player.getUniqueId().toString());
                 int rowsUpdated = updateStatement.executeUpdate();
                 if (rowsUpdated > 0) {
-                    debug("Updated coins for player: " + player.getUniqueId());
-                } else {
-                    LOGGER.log(Level.WARNING, "Failed to update coins for player: " + player.getUniqueId());
+                    debug("Updated coins for player: " + player.getUniqueId()); // Debug message, can be turned off in config.yml
+                    // Play the custom sound only if the amount is greater than 0
+                    //noinspection DuplicatedCode
+                    if (amount > 0) {
+                        String soundName = getConfig().getString("coinReceivedSound", "ENTITY_PLAYER_LEVELUP");
+                        float volume = (float) getConfig().getDouble("coinReceivedSoundVolume", 1.0);
+                        float pitch = (float) getConfig().getDouble("coinReceivedSoundPitch", 1.0);
+                        Sound sound = Sound.valueOf(soundName);
+                        player.playSound(player.getLocation(), sound, volume, pitch);
+                    }
                 }
             } else {
                 // If the player does not exist, insert a new row for them
@@ -849,10 +928,17 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
                 insertStatement.setString(1, player.getUniqueId().toString());
                 insertStatement.setInt(2, amount);
                 int rowsInserted = insertStatement.executeUpdate();
+                // Play the custom sound only if the amount is greater than 0
+                //noinspection DuplicatedCode
+                if (amount > 0) {
+                    String soundName = getConfig().getString("coinReceivedSound", "ENTITY_PLAYER_LEVELUP");
+                    float volume = (float) getConfig().getDouble("coinReceivedSoundVolume", 1.0);
+                    float pitch = (float) getConfig().getDouble("coinReceivedSoundPitch", 1.0);
+                    Sound sound = Sound.valueOf(soundName);
+                    player.playSound(player.getLocation(), sound, volume, pitch);
+                }
                 if (rowsInserted > 0) {
-                    LOGGER.log(Level.INFO, "Inserted new player with coins: " + player.getUniqueId());
-                } else {
-                    LOGGER.log(Level.WARNING, "Failed to insert new player with coins: " + player.getUniqueId());
+                    debug("Inserted new player into database: " + player.getUniqueId()); // Debug message, can be turned off in config.yml
                 }
             }
 

@@ -1,0 +1,16 @@
+pickaxes:
+  super_pickaxe:
+    name: "Super Pickaxe"
+    cost: 100
+    material: DIAMOND_PICKAXE
+    enchantments:
+      DURABILITY: 3
+      EFFICIENCY: 5
+  mega_pickaxe:
+    name: "Mega Pickaxe"
+    cost: 200
+    material: NETHERITE_PICKAXE
+    enchantments:
+      DURABILITY: 3
+      EFFICIENCY: 5
+      FORTUNE: 3
