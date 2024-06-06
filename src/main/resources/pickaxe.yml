@@ -1,16 +1,16 @@
 pickaxes:
+  basic_pickaxe:
+    name: "Basic Pickaxe"
+    cost: 50
+    tier: 1
+    giveCommand: "give %player% minecraft:wooden_pickaxe{Enchantments:[{id:unbreaking,lvl:1}]}"
   super_pickaxe:
     name: "Super Pickaxe"
     cost: 100
-    material: DIAMOND_PICKAXE
-    enchantments:
-      DURABILITY: 3
-      EFFICIENCY: 5
+    tier: 2
+    giveCommand: "give %player% minecraft:diamond_pickaxe{Enchantments:[{id:unbreaking,lvl:3},{id:efficiency,lvl:5}]}"
   mega_pickaxe:
     name: "Mega Pickaxe"
     cost: 200
-    material: NETHERITE_PICKAXE
-    enchantments:
-      DURABILITY: 3
-      EFFICIENCY: 5
-      FORTUNE: 3
+    tier: 3
+    giveCommand: "give %player% minecraft:netherite_pickaxe{Enchantments:[{id:unbreaking,lvl:3},{id:efficiency,lvl:5},{id:fortune,lvl:3}]}"

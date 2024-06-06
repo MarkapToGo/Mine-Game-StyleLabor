@@ -11,7 +11,6 @@ import org.bukkit.command.TabCompleter;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -409,6 +408,9 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
                     case "bypassprotection":
                         handleBypassProtectionCommand(sender, args);
                         return true;
+                    case "setplayertier":
+                        handlePlayerTier(sender, args);
+                        return true;
                     default:
                         sender.sendMessage("Unknown command.");
                         return false;
@@ -418,6 +420,32 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
         return false;
     }
 
+    private void handlePlayerTier(CommandSender sender, String[] args) {
+        if (sender.hasPermission("minegame.admin")) {
+            if (args.length != 2) {
+                sender.sendMessage("Usage: /setplayertier <player> <tier>");
+                return;
+            }
+            Player target = Bukkit.getPlayer(args[0]);
+            if (target == null) {
+                sender.sendMessage("Player not found.");
+                return;
+            }
+            int tier;
+            try {
+                tier = Integer.parseInt(args[1]);
+            } catch (NumberFormatException e) {
+                sender.sendMessage("Invalid tier.");
+                return;
+            }
+            setPlayerTier(target, tier);
+            sender.sendMessage("Set tier of " + target.getName() + " to " + tier + ".");
+        } else {
+            sender.sendMessage("You do not have permission to use this command.");
+        }
+    }
+
+
 
     private void buyPickaxe(CommandSender sender, String[] args) {
         if (args.length < 2) {
@@ -426,45 +454,70 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
         }
 
         String pickaxeName = args[1];
-        ConfigurationSection pickaxe = (ConfigurationSection) pickaxes.get(pickaxeName);
-
-        if (pickaxe == null) {
+        Map<String, Object> pickaxeMap = pickaxes.get(pickaxeName);
+        if (pickaxeMap == null) {
             sender.sendMessage("Invalid pickaxe. Available pickaxes: " + String.join(", ", pickaxes.keySet()));
             return;
         }
 
+        YamlConfiguration pickaxe = new YamlConfiguration();
+        pickaxe.addDefaults(pickaxeMap);
+
         Player player = (Player) sender;
         int cost = pickaxe.getInt("cost");
+        int tier = pickaxe.getInt("tier");
+        int playerTier = getPlayerTier(player);
+        if (playerTier >= tier) {
+            sender.sendMessage("You can only buy a pickaxe with a higher tier.");
+            return;
+        }
+
         if (getCoins(player) < cost) {
             sender.sendMessage("You do not have enough coins to buy this pickaxe.");
             return;
         }
 
         subtractCoins(player, cost);
+        setPlayerTier(player, tier);
 
-        ItemStack item = new ItemStack(Material.valueOf(pickaxe.getString("material")));
-        ItemMeta meta = item.getItemMeta();
+        String giveCommand = Objects.requireNonNull(pickaxe.getString("giveCommand")).replace("%player%", player.getName());
 
+        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), giveCommand);
 
-        if (meta != null) {
-            meta.setDisplayName(pickaxe.getString("name"));
-            ConfigurationSection enchantments = pickaxe.getConfigurationSection("enchantments");
-            if (enchantments != null) {
-                for (String key : enchantments.getKeys(false)) {
-                    //noinspection deprecation
-                    Enchantment enchantmentType = Enchantment.getByKey(NamespacedKey.minecraft(key.toLowerCase()));
-                    if (enchantmentType != null) {
-                        meta.addEnchant(enchantmentType, enchantments.getInt(key), true);
-                    }
-                }
-            }
-            item.setItemMeta(meta);
+        // Execute the additional commands
+        List<String> commands = pickaxe.getStringList("commands");
+        for (String command : commands) {
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command.replace("%player%", player.getName()));
         }
 
-        player.getInventory().addItem(item);
         sender.sendMessage("You have bought a " + pickaxe.getString("name") + " for " + cost + " coins.");
     }
 
+    private int getPlayerTier(Player player) {
+        try {
+            PreparedStatement statement = connection.prepareStatement("SELECT tier FROM player_tiers WHERE uuid = ?");
+            statement.setString(1, player.getUniqueId().toString());
+            ResultSet resultSet = statement.executeQuery();
+            if (resultSet.next()) {
+                return resultSet.getInt("tier");
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "An exception was thrown!", e);
+        }
+        return 0; // Return 0 if the player's tier is not found in the database
+    }
+
+    private void setPlayerTier(Player player, int tier) {
+        try {
+            PreparedStatement statement = connection.prepareStatement("INSERT INTO player_tiers (uuid, tier) VALUES (?, ?) ON DUPLICATE KEY UPDATE tier = ?");
+            statement.setString(1, player.getUniqueId().toString());
+            statement.setInt(2, tier);
+            statement.setInt(3, tier);
+            statement.executeUpdate();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "An exception was thrown!", e);
+        }
+    }
 
     private void handleSetSpawnCommand(CommandSender sender, String[] args) {
         if (!(sender instanceof Player)) {
@@ -625,7 +678,6 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
         }
     }
 
-
     private void handleFinishCommand(CommandSender sender, String[] ignoredArgs) {
         if (!(sender instanceof Player)) {
             sender.sendMessage("This command can only be used by a player.");
@@ -665,7 +717,6 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
             player.sendMessage("You do not have permission to perform this command.");
         }
     }
-
 
     @EventHandler
     public void onPlayerInteract(PlayerInteractEvent event) {
@@ -966,6 +1017,20 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
                 );
                 statement.executeUpdate();
             }
+
+            // Check if the 'player_tiers' table exists
+            tables = connection.getMetaData().getTables(null, null, "player_tiers", null);
+            if (!tables.next()) {
+                // The 'player_tiers' table does not exist, create it
+                PreparedStatement statement = connection.prepareStatement(
+                        "CREATE TABLE player_tiers (" +
+                                "uuid VARCHAR(36) NOT NULL," +
+                                "tier INT NOT NULL," +
+                                "PRIMARY KEY (uuid)" +
+                                ")"
+                );
+                statement.executeUpdate();
+            }
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "An exception was thrown!", e);
         }
@@ -1041,6 +1106,16 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
                     playerNames.add(player.getName());
                 }
                 return playerNames;
+            }
+        } else if (command.getName().equalsIgnoreCase("setplayertier")) {
+            if (sender.hasPermission("minegame.admin")) {
+                if (args.length == 1) {
+                    List<String> playerNames = new ArrayList<>();
+                    for (Player player : Bukkit.getOnlinePlayers()) {
+                        playerNames.add(player.getName());
+                    }
+                    return playerNames;
+                }
             }
         }
         return null;

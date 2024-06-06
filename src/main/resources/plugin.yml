@@ -10,3 +10,6 @@ commands:
   stylelabormine:
     description: Setup command for StyleLaborMine
     usage: /<command> <setup>
+  setplayertier:
+    description: Sets the current tier for a player
+    usage: /<command> <player> <tier>
