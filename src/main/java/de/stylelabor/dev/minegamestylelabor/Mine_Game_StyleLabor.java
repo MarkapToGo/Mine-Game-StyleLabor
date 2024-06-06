@@ -477,18 +477,18 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
             return;
         }
 
+        // Execute the additional commands
+        List<String> commands = pickaxe.getStringList("commands");
+        for (String command : commands) {
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command.replace("%player%", player.getName()));
+        }
+
         subtractCoins(player, cost);
         setPlayerTier(player, tier);
 
         String giveCommand = Objects.requireNonNull(pickaxe.getString("giveCommand")).replace("%player%", player.getName());
 
         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), giveCommand);
-
-        // Execute the additional commands
-        List<String> commands = pickaxe.getStringList("commands");
-        for (String command : commands) {
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command.replace("%player%", player.getName()));
-        }
 
         sender.sendMessage("You have bought a " + pickaxe.getString("name") + " for " + cost + " coins.");
     }

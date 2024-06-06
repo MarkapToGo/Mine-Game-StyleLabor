@@ -1,19 +1,27 @@
+# Pickaxe configuration file
+
+# The commands are executed before the item is given to the player
+# Know limitations: The commands are executed as the console, so there is a limited length of the command
+
 pickaxes:
   basic_pickaxe:
     name: "Basic Pickaxe"
     cost: 50
     tier: 1
-    giveCommand: "give %player% minecraft:wooden_pickaxe{Enchantments:[{id:unbreaking,lvl:1}]}"
+    giveCommand: "give %player% minecraft:diamond_pickaxe{Enchantments:[{id:unbreaking,lvl:3},{id:efficiency,lvl:5}]}"
     commands:
-      - "time set day"
       - "clear %player%"
   super_pickaxe:
     name: "Super Pickaxe"
     cost: 100
     tier: 2
     giveCommand: "give %player% minecraft:diamond_pickaxe{Enchantments:[{id:unbreaking,lvl:3},{id:efficiency,lvl:5}]}"
+    commands:
+      - "clear %player%"
   mega_pickaxe:
     name: "Mega Pickaxe"
     cost: 200
     tier: 3
     giveCommand: "give %player% minecraft:netherite_pickaxe{Enchantments:[{id:unbreaking,lvl:3},{id:efficiency,lvl:5},{id:fortune,lvl:3}]}"
+    commands:
+      - "clear %player%"
