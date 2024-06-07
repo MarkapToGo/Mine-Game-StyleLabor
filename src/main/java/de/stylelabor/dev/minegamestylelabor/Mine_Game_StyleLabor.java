@@ -482,8 +482,9 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
 
         // Execute the additional commands first
         List<String> commands = pickaxe.getStringList("commands");
-        for (String command : commands) {
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command.replace("%player%", player.getName()));
+        for (int i = 0; i < commands.size(); i++) {
+            String command = commands.get(i);
+            Bukkit.getScheduler().scheduleSyncDelayedTask(this, () -> Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command.replace("%player%", player.getName())), i * 5L); // Delay of 5 ticks between each command
         }
 
         // Then execute the give command after a delay of 1 second1 (20 server ticks)
