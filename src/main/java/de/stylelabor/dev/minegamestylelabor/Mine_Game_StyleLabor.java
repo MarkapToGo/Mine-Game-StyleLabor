@@ -132,6 +132,11 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
                     LOGGER.log(Level.SEVERE, "An exception was thrown!", e);
                 }
 
+                // Check if the player has joined before
+                if (!hasPlayerJoinedBefore(event.getPlayer())) {
+                    // This is the player's first join, give them the starter pickaxe
+                    givePickaxe(event.getPlayer());
+                }
             }
         }, this);
 
@@ -356,6 +361,26 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
         return type == Material.WOODEN_PICKAXE || type == Material.STONE_PICKAXE || type == Material.IRON_PICKAXE || type == Material.GOLDEN_PICKAXE || type == Material.DIAMOND_PICKAXE || type == Material.NETHERITE_PICKAXE;
     }
 
+    private boolean hasPlayerJoinedBefore(Player player) {
+        try {
+            // Prepare a SQL statement to select the player's data from the database
+            PreparedStatement statement = connection.prepareStatement("SELECT * FROM players WHERE uuid = ?");
+            statement.setString(1, player.getUniqueId().toString());
+
+            // Execute the SQL statement and get the result
+            ResultSet resultSet = statement.executeQuery();
+
+            // If the result set is not empty, the player has joined before
+            return resultSet.next();
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "An exception was thrown!", e);
+        }
+
+        // If an exception is thrown, assume the player has not joined before
+        return false;
+    }
+
+
     @SuppressWarnings("DuplicatedCode")
     private void regenerateMineRegion() {
         // Check if the corners are set
@@ -385,6 +410,19 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
             }
         }
     }
+
+
+    private void givePickaxe(Player player) {
+        // Load the pickaxe configuration
+        FileConfiguration pickaxeConfig = YamlConfiguration.loadConfiguration(new File(getDataFolder(), "pickaxe.yml"));
+        ConfigurationSection pickaxe = pickaxeConfig.getConfigurationSection("pickaxes." + "starter_pickaxe");
+        if (pickaxe != null) {
+            // Execute the giveCommand
+            String giveCommand = Objects.requireNonNull(pickaxe.getString("giveCommand")).replace("%player%", player.getName());
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), giveCommand);
+        }
+    }
+
 
     public String getMessage(String path, Object... args) {
         String message = messagesConfig.getString(path);

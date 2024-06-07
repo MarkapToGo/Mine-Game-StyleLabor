@@ -3,12 +3,21 @@
 # The commands are executed before the item is given to the player
 # Know limitations: The commands are executed as the console, so there is a limited length of the command
 
+starter_pickaxe:
+  name: "Starter Pickaxe"
+  cost: 0
+  tier: 0
+  giveCommand: "give %player% minecraft:wooden_pickaxe{Enchantments:[{id:efficiency,lvl:1}]}"
+  commands:
+    - "clear %player%"
+    - "itemjoin get settings %player%"
+
 pickaxes:
-  basic_pickaxe:
+  starter_pickaxe:
     name: "Basic Pickaxe"
     cost: 50
     tier: 1
-    giveCommand: "give %player% minecraft:diamond_pickaxe{Enchantments:[{id:unbreaking,lvl:3},{id:efficiency,lvl:5}]}"
+    giveCommand: "give %player% minecraft:diamond_pickaxe{Enchantments:[{id:efficiency,lvl:5}]}"
     commands:
       - "clear %player%"
       - "itemjoin get settings %player%"
@@ -16,7 +25,7 @@ pickaxes:
     name: "Super Pickaxe"
     cost: 100
     tier: 2
-    giveCommand: "give %player% minecraft:diamond_pickaxe{Enchantments:[{id:unbreaking,lvl:3},{id:efficiency,lvl:5}]}"
+    giveCommand: "give %player% minecraft:diamond_pickaxe{Enchantments:[{id:efficiency,lvl:5}]}"
     commands:
       - "clear %player%"
       - "itemjoin get settings %player%"
@@ -24,7 +33,7 @@ pickaxes:
     name: "Mega Pickaxe"
     cost: 200
     tier: 3
-    giveCommand: "give %player% minecraft:netherite_pickaxe{Enchantments:[{id:unbreaking,lvl:3},{id:efficiency,lvl:5},{id:fortune,lvl:3}]}"
+    giveCommand: "give %player% minecraft:netherite_pickaxe{Enchantments:[{id:efficiency,lvl:5},{id:fortune,lvl:3}]}"
     commands:
       - "clear %player%"
       - "itemjoin get settings %player%"
