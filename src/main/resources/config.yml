@@ -8,8 +8,10 @@ debug: false # set to true to enable debug messages
 disableMobSpawn: true # set to false to enable mob spawn
 
 coinReceivedSound: ENTITY_PLAYER_LEVELUP # set to desired sound (https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Sound.html)
-coinReceivedSoundVolume: 1.0
-coinReceivedSoundPitch: 1.0
+coinReceivedSoundVolume: 0.3
+coinReceivedSoundPitch: 1.1
+
+
 
 startupTime: 6000 # set to desired startup time (6000 is noon)
 startupWeather: clear # set to desired startup weather (clear, rain, or thunder)
@@ -33,6 +35,15 @@ blockCoins:
   GOLD_BLOCK: 10
   DIAMOND_BLOCK: 12
   EMERALD_BLOCK: 50
+
+titleMessage:
+  fadeIn: 10
+  stay: 70
+  fadeOut: 20
+  sound: "BLOCK_AMETHYST_BLOCK_RESONATE"
+  volume: 0.3
+  pitch: 1.1
+
 
 # To disable achievements, disable it in the spigot.yml file
 #     advancements:

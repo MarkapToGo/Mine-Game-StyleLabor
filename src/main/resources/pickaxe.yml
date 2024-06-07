@@ -11,6 +11,7 @@ pickaxes:
     giveCommand: "give %player% minecraft:diamond_pickaxe{Enchantments:[{id:unbreaking,lvl:3},{id:efficiency,lvl:5}]}"
     commands:
       - "clear %player%"
+      - "itemjoin get settings %player%"
   super_pickaxe:
     name: "Super Pickaxe"
     cost: 100
@@ -18,6 +19,7 @@ pickaxes:
     giveCommand: "give %player% minecraft:diamond_pickaxe{Enchantments:[{id:unbreaking,lvl:3},{id:efficiency,lvl:5}]}"
     commands:
       - "clear %player%"
+      - "itemjoin get settings %player%"
   mega_pickaxe:
     name: "Mega Pickaxe"
     cost: 200
@@ -25,3 +27,4 @@ pickaxes:
     giveCommand: "give %player% minecraft:netherite_pickaxe{Enchantments:[{id:unbreaking,lvl:3},{id:efficiency,lvl:5},{id:fortune,lvl:3}]}"
     commands:
       - "clear %player%"
+      - "itemjoin get settings %player%"

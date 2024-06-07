@@ -477,20 +477,42 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
             return;
         }
 
-        // Execute the additional commands
+        subtractCoins(player, cost);
+        setPlayerTier(player, tier);
+
+        // Execute the additional commands first
         List<String> commands = pickaxe.getStringList("commands");
         for (String command : commands) {
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command.replace("%player%", player.getName()));
         }
 
-        subtractCoins(player, cost);
-        setPlayerTier(player, tier);
+        // Then execute the give command after a delay of 1 second1 (20 server ticks)
+        Bukkit.getScheduler().scheduleSyncDelayedTask(this, () -> {
+            String giveCommand = Objects.requireNonNull(pickaxe.getString("giveCommand")).replace("%player%", player.getName());
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), giveCommand);
+        }, 20L);
 
-        String giveCommand = Objects.requireNonNull(pickaxe.getString("giveCommand")).replace("%player%", player.getName());
+        // Send a title to the player
+        String title = ChatColor.translateAlternateColorCodes('&', Objects.requireNonNull(messagesConfig.getString("titleMessage.title")));
+        String subtitle = ChatColor.translateAlternateColorCodes('&', String.format(Objects.requireNonNull(messagesConfig.getString("titleMessage.subtitle")), pickaxe.getString("name"), cost));
+        int fadeIn = getConfig().getInt("titleMessage.fadeIn");
+        int stay = getConfig().getInt("titleMessage.stay");
+        int fadeOut = getConfig().getInt("titleMessage.fadeOut");
+        player.sendTitle(title, subtitle, fadeIn, stay, fadeOut);
 
-        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), giveCommand);
+        // Play a sound to the player
+        String soundName = getConfig().getString("titleMessage.sound");
+        float volume = (float) getConfig().getDouble("titleMessage.volume");
+        float pitch = (float) getConfig().getDouble("titleMessage.pitch");
+        if (soundName != null) {
+            Sound sound = Sound.valueOf(soundName);
+            player.playSound(player.getLocation(), sound, volume, pitch);
+        }
 
-        sender.sendMessage("You have bought a " + pickaxe.getString("name") + " for " + cost + " coins.");
+        // Use the customized message from messages.yml
+        // String pickaxeName = pickaxe.contains("name") ? pickaxe.getString("name") : "unknown";
+        String boughtPickaxeMessage = String.format((Objects.requireNonNull(messagesConfig.getString("coins.boughtPickaxe"))), pickaxeName, cost);
+        sender.sendMessage(boughtPickaxeMessage);
     }
 
     private int getPlayerTier(Player player) {
@@ -1097,7 +1119,7 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
     public List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, String[] args) {
         if (command.getName().equalsIgnoreCase("stylelabormine")) {
             if (args.length == 1) {
-                return Arrays.asList("setup", "bypassprotection", "database-test", "coins", "tpsurface", "setspawn");
+                return Arrays.asList("setup", "bypassprotection", "database-test", "coins", "tpsurface", "setspawn", "buy");
             } else if (args.length == 2 && args[0].equalsIgnoreCase("coins")) {
                 return Arrays.asList("set", "add", "subtract", "lookup");
             } else if (args.length == 3 && args[0].equalsIgnoreCase("coins")) {

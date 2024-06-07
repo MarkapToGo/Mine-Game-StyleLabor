@@ -8,3 +8,8 @@ coins:
   lookup_coins: "%s has %d coins."
   invalid_operation: "Invalid operation. Use set, add, subtract, or lookup."
   need_pickaxe: "You need a %s to mine this block."
+  boughtPickaxe: "You have bought a %s for %d coins."
+
+titleMessage:
+  title: "&6Congratulations!"
+  subtitle: "&7You have bought a %s for %d coins."
