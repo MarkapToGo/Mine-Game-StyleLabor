@@ -11,7 +11,7 @@ coinReceivedSound: ENTITY_PLAYER_LEVELUP # set to desired sound (https://hub.spi
 coinReceivedSoundVolume: 0.3
 coinReceivedSoundPitch: 1.1
 
-
+preventPickaxeDurabilityLoss: true # disable pickaxe durability loss
 
 startupTime: 6000 # set to desired startup time (6000 is noon)
 startupWeather: clear # set to desired startup weather (clear, rain, or thunder)

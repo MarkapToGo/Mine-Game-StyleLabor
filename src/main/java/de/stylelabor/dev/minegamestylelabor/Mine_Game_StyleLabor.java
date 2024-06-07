@@ -14,14 +14,12 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
-import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.player.PlayerKickEvent;
-import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.*;
 import org.bukkit.event.server.PluginDisableEvent;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
@@ -136,6 +134,19 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
 
             }
         }, this);
+
+        // Register the PlayerItemDamageEvent
+        getServer().getPluginManager().registerEvents(new Listener() {
+            @EventHandler
+            public void onPlayerItemDamage(PlayerItemDamageEvent event) {
+                // Check if the item is a pickaxe and if the preventPickaxeDurabilityLoss option is true
+                if (isPickaxe(event.getItem()) && getConfig().getBoolean("preventPickaxeDurabilityLoss", true)) {
+                    // Cancel the event to prevent the pickaxe from losing durability
+                    event.setCancelled(true);
+                }
+            }
+        }, this);
+
 
         // Disable hunger if the setting is true
         if (getConfig().getBoolean("disableHunger", false)) {
@@ -338,6 +349,11 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
         if (coinUpdateTask != null) {
             coinUpdateTask.cancel();
         }
+    }
+
+    private boolean isPickaxe(ItemStack item) {
+        Material type = item.getType();
+        return type == Material.WOODEN_PICKAXE || type == Material.STONE_PICKAXE || type == Material.IRON_PICKAXE || type == Material.GOLDEN_PICKAXE || type == Material.DIAMOND_PICKAXE || type == Material.NETHERITE_PICKAXE;
     }
 
     @SuppressWarnings("DuplicatedCode")
