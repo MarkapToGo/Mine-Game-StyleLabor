@@ -9,7 +9,6 @@ starter_pickaxe:
   tier: 0
   giveCommand: "give %player% minecraft:wooden_pickaxe{Enchantments:[{id:efficiency,lvl:1}]}"
   commands:
-    - "clear %player%"
     - "itemjoin get settings %player%"
 
 pickaxes:
@@ -19,7 +18,7 @@ pickaxes:
     tier: 1
     giveCommand: "give %player% minecraft:diamond_pickaxe{Enchantments:[{id:efficiency,lvl:5}]}"
     commands:
-      - "clear %player%"
+
       - "itemjoin get settings %player%"
   super_pickaxe:
     name: "Super Pickaxe"
