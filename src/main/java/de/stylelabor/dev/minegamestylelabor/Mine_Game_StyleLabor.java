@@ -14,9 +14,9 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.player.*;
@@ -65,12 +65,18 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
         //bStats Metrics
         int pluginId = 22115;
         Metrics metrics = new Metrics(this, pluginId);
+
+
         // Ensures that a config.yml file exists. If it doesn't, the plugin copies the default one included in the JAR file.
         saveDefaultConfig();
         saveResource("messages.yml", false);
+
+
         // Load messages.yml
         File messagesFile = new File(getDataFolder(), "messages.yml");
         messagesConfig = YamlConfiguration.loadConfiguration(messagesFile);
+
+
         // Load config.yml
         File configFile = new File(getDataFolder(), "config.yml");
         YamlConfiguration config = YamlConfiguration.loadConfiguration(configFile);
@@ -145,6 +151,20 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
             }
         }, this);
 
+        // Register the BlockPlaceEvent
+        getServer().getPluginManager().registerEvents(new Listener() {
+            @EventHandler
+            public void onBlockPlace(BlockPlaceEvent event) {
+                Player player = event.getPlayer();
+
+                // Check if the player has bypass protection enabled
+                if (!bypassProtectionPlayers.contains(player.getUniqueId())) {
+                    // If they do not, cancel the event
+                    event.setCancelled(true);
+                }
+            }
+        }, this);
+
         // Register the PlayerItemDamageEvent
         getServer().getPluginManager().registerEvents(new Listener() {
             @EventHandler
@@ -158,6 +178,7 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
         }, this);
 
 
+
         // Disable hunger if the setting is true
         if (getConfig().getBoolean("disableHunger", false)) {
             getServer().getPluginManager().registerEvents(new Listener() {
@@ -167,6 +188,7 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
                 }
             }, this);
         }
+
 
         // Initialize the database connection
         try {
@@ -207,6 +229,7 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "An exception was thrown!", e);
         }
+
 
         if (getConfig().getBoolean("saveInventory", false)) {
             getServer().getPluginManager().registerEvents(new Listener() {
@@ -985,6 +1008,8 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
             event.setCancelled(false);
         }
     }
+
+
 
     private String locationToString(Location location) {
         return Objects.requireNonNull(location.getWorld()).getName() + "," + location.getX() + "," + location.getY() + "," + location.getZ() + "," + location.getPitch() + "," + location.getYaw();
