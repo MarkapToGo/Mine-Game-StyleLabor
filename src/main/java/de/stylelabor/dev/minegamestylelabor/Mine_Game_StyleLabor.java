@@ -134,8 +134,13 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
 
                 // Check if the player has joined before
                 if (!hasPlayerJoinedBefore(event.getPlayer())) {
-                    // This is the player's first join, give them the starter pickaxe
-                    givePickaxe(event.getPlayer());
+                    // This is the player's first join, delay the giving of the starter pickaxe
+                    new BukkitRunnable() {
+                        @Override
+                        public void run() {
+                            givePickaxe(event.getPlayer(), "starter_pickaxe");
+                        }
+                    }.runTaskLater(Mine_Game_StyleLabor.this, 20L * 5); // 5 seconds delay
                 }
             }
         }, this);
@@ -412,10 +417,11 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
     }
 
 
-    private void givePickaxe(Player player) {
+    @SuppressWarnings("SameParameterValue")
+    private void givePickaxe(Player player, String pickaxeKey) {
         // Load the pickaxe configuration
         FileConfiguration pickaxeConfig = YamlConfiguration.loadConfiguration(new File(getDataFolder(), "pickaxe.yml"));
-        ConfigurationSection pickaxe = pickaxeConfig.getConfigurationSection("pickaxes." + "starter_pickaxe");
+        ConfigurationSection pickaxe = pickaxeConfig.getConfigurationSection("pickaxes." + pickaxeKey);
         if (pickaxe != null) {
             // Execute the giveCommand
             String giveCommand = Objects.requireNonNull(pickaxe.getString("giveCommand")).replace("%player%", player.getName());
