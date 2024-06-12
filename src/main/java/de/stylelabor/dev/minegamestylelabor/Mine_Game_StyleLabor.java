@@ -19,6 +19,7 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.*;
 import org.bukkit.event.server.PluginDisableEvent;
 import org.bukkit.inventory.ItemFlag;
@@ -177,6 +178,38 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
             }
         }, this);
 
+
+
+        // Register the PlayerDropItemEvent
+        getServer().getPluginManager().registerEvents(new Listener() {
+            @EventHandler
+            public void onPlayerDropItem(PlayerDropItemEvent event) {
+                Player player = event.getPlayer();
+
+                // Check if the player has bypass protection enabled
+                if (!bypassProtectionPlayers.contains(player.getUniqueId())) {
+                    // If they do not, cancel the event
+                    event.setCancelled(true);
+                }
+            }
+        }, this);
+
+        // Register the InventoryClickEvent
+        getServer().getPluginManager().registerEvents(new Listener() {
+            @EventHandler
+            public void onInventoryClick(InventoryClickEvent event) {
+                // Check if the event was triggered by a player
+                if (event.getWhoClicked() instanceof Player) {
+                    Player player = (Player) event.getWhoClicked();
+
+                    // Check if the player has bypass protection enabled
+                    if (!bypassProtectionPlayers.contains(player.getUniqueId())) {
+                        // If they do not, cancel the event
+                        event.setCancelled(true);
+                    }
+                }
+            }
+        }, this);
 
 
         // Disable hunger if the setting is true
