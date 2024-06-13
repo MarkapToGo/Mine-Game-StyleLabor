@@ -4,35 +4,64 @@
 # Know limitations: The commands are executed as the console, so there is a limited length of the command
 
 starter_pickaxe:
-  name: "Starter Pickaxe"
-  cost: 0
-  tier: 0
-  giveCommand: "give %player% minecraft:wooden_pickaxe{Enchantments:[{id:efficiency,lvl:1}]}"
+  name: "Basic Pickaxe"
+  displayName: "&aStarter Pickaxe"
+  lore:
+    - "&7This is a basic pickaxe."
+    - "&7..."
+  cost: 50
+  tier: 1
+  material: "WOODEN_PICKAXE"
+  enchantments:
+    - "EFFICIENCY:5"
   commands:
     - "itemjoin get settings %player%"
+
+
+#
 
 pickaxes:
   starter_pickaxe:
     name: "Basic Pickaxe"
+    displayName: "&aStarter Pickaxe"
+    lore:
+      - "&7This is a basic pickaxe."
+      - "&7..."
     cost: 50
     tier: 1
-    giveCommand: "give %player% minecraft:diamond_pickaxe{Enchantments:[{id:efficiency,lvl:5}]}"
+    material: "STONE_PICKAXE"
+    enchantments:
+      - "EFFICIENCY:5"
     commands:
-
       - "itemjoin get settings %player%"
+
   super_pickaxe:
     name: "Super Pickaxe"
+    displayName: "&bSuper Pickaxe"
+    lore:
+      - "&7This is a super pickaxe."
+      - "&7..."
     cost: 100
     tier: 2
-    giveCommand: "give %player% minecraft:diamond_pickaxe{Enchantments:[{id:efficiency,lvl:5}]}"
+    material: "DIAMOND_PICKAXE"
+    enchantments:
+      - "EFFICIENCY:5"
     commands:
       - "clear %player%"
       - "itemjoin get settings %player%"
+
   mega_pickaxe:
     name: "Mega Pickaxe"
+    displayName: "&cMega Pickaxe"
+    lore:
+      - "&7This is a mega pickaxe."
+      - "&7..."
     cost: 200
     tier: 3
-    giveCommand: "give %player% minecraft:netherite_pickaxe{Enchantments:[{id:efficiency,lvl:5},{id:fortune,lvl:3}]}"
+    material: "NETHERITE_PICKAXE"
+    enchantments:
+      - "EFFICIENCY:5"
+      - "FORTUNE:3"
     commands:
       - "clear %player%"
       - "itemjoin get settings %player%"

@@ -11,6 +11,7 @@ import org.bukkit.command.TabCompleter;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -136,9 +137,8 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
                 try {
                     dataConfig.save(dataFile);
                 } catch (IOException e) {
-                    LOGGER.log(Level.SEVERE, "An exception was thrown!", e);
+                    LOGGER.log(Level.SEVERE, "An exception was thrown! - Save the spawn location to data.yml", e);
                 }
-
                 // Check if the player has joined before
                 if (!hasPlayerJoinedBefore(event.getPlayer())) {
                     // This is the player's first join, delay the giving of the starter pickaxe
@@ -147,7 +147,7 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
                         public void run() {
                             givePickaxe(event.getPlayer(), "starter_pickaxe");
                         }
-                    }.runTaskLater(Mine_Game_StyleLabor.this, 20L * 5); // 5 seconds delay
+                    }.runTaskLater(Mine_Game_StyleLabor.this, 20L * 4); // 4 seconds delay
                 }
             }
         }, this);
@@ -407,6 +407,40 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
 
     }
 
+    private void setupDatabase() {
+        try {
+            // Check if the 'players' table exists
+            ResultSet tables = connection.getMetaData().getTables(null, null, "players", null);
+            if (!tables.next()) {
+                // The 'players' table does not exist, create it
+                PreparedStatement statement = connection.prepareStatement(
+                        "CREATE TABLE players (" +
+                                "uuid VARCHAR(36) NOT NULL," +
+                                "coins INT NOT NULL," +
+                                "PRIMARY KEY (uuid)" +
+                                ")"
+                );
+                statement.executeUpdate();
+            }
+
+            // Check if the 'player_tiers' table exists
+            tables = connection.getMetaData().getTables(null, null, "player_tiers", null);
+            if (!tables.next()) {
+                // The 'player_tiers' table does not exist, create it
+                PreparedStatement statement = connection.prepareStatement(
+                        "CREATE TABLE player_tiers (" +
+                                "uuid VARCHAR(36) NOT NULL," +
+                                "tier INT NOT NULL," +
+                                "PRIMARY KEY (uuid)" +
+                                ")"
+                );
+                statement.executeUpdate();
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "An exception was thrown!", e);
+        }
+    }
+
     @Override
     public void onDisable() {
         // Plugin shutdown logic
@@ -475,14 +509,55 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
 
     @SuppressWarnings("SameParameterValue")
     private void givePickaxe(Player player, String pickaxeKey) {
-        // Load the pickaxe configuration
-        FileConfiguration pickaxeConfig = YamlConfiguration.loadConfiguration(new File(getDataFolder(), "pickaxe.yml"));
-        ConfigurationSection pickaxe = pickaxeConfig.getConfigurationSection("pickaxes." + pickaxeKey);
-        if (pickaxe != null) {
-            // Execute the giveCommand
-            String giveCommand = Objects.requireNonNull(pickaxe.getString("giveCommand")).replace("%player%", player.getName());
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), giveCommand);
+        // Get the pickaxe configuration
+        Map<String, Object> pickaxeMap = pickaxes.get(pickaxeKey);
+        if (pickaxeMap == null) {
+            // The pickaxe does not exist in the configuration
+            return;
         }
+
+        // Create the ItemStack
+        Material material = Material.valueOf((String) pickaxeMap.get("material"));
+        ItemStack itemStack = new ItemStack(material);
+
+        // Set the display name and lore
+        ItemMeta itemMeta = itemStack.getItemMeta();
+        if (itemMeta != null) {
+            itemMeta.setDisplayName(ChatColor.translateAlternateColorCodes('&', (String) pickaxeMap.get("displayName")));
+            Object loreObject = pickaxeMap.get("lore");
+            if (loreObject instanceof List<?>) {
+                List<?> lore = (List<?>) loreObject;
+                List<String> coloredLore = new ArrayList<>();
+                for (Object line : lore) {
+                    if (line instanceof String) {
+                        coloredLore.add(ChatColor.translateAlternateColorCodes('&', (String) line));
+                    }
+                }
+                itemMeta.setLore(coloredLore);
+            }
+
+            // Set the enchantments
+            Object enchantmentsObject = pickaxeMap.get("enchantments");
+            if (enchantmentsObject instanceof List<?>) {
+                List<?> enchantments = (List<?>) enchantmentsObject;
+                for (Object enchantment : enchantments) {
+                    if (enchantment instanceof String) {
+                        String[] parts = ((String) enchantment).split(":");
+                        NamespacedKey key = NamespacedKey.minecraft(parts[0].toLowerCase());
+                        Enchantment enchant = Enchantment.getByKey(key);
+                        int level = Integer.parseInt(parts[1]);
+                        if (enchant != null) {
+                            itemMeta.addEnchant(enchant, level, true);
+                        }
+                    }
+                }
+            }
+
+            itemStack.setItemMeta(itemMeta);
+        }
+
+        // Give the ItemStack to the player
+        player.getInventory().addItem(itemStack);
     }
 
 
@@ -596,18 +671,33 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
         subtractCoins(player, cost);
         setPlayerTier(player, tier);
 
-        // Execute the additional commands first
+        // Create the ItemStack
+        Material material = Material.valueOf(pickaxe.getString("material"));
+        ItemStack itemStack = new ItemStack(material);
+
+        // Set the display name and lore
+        ItemMeta itemMeta = itemStack.getItemMeta();
+        if (itemMeta != null) {
+            String displayName = ChatColor.translateAlternateColorCodes('&', Objects.requireNonNull(pickaxe.getString("displayName")));
+            itemMeta.setDisplayName(displayName);
+
+            List<String> lore = pickaxe.getStringList("lore");
+            List<String> coloredLore = new ArrayList<>();
+            for (String loreLine : lore) {
+                coloredLore.add(ChatColor.translateAlternateColorCodes('&', loreLine));
+            }
+            itemMeta.setLore(coloredLore);
+        }
+
+        // Give the ItemStack to the player
+        player.getInventory().addItem(itemStack);
+
+        // Execute the additional commands
         List<String> commands = pickaxe.getStringList("commands");
         for (int i = 0; i < commands.size(); i++) {
             String command = commands.get(i);
             Bukkit.getScheduler().scheduleSyncDelayedTask(this, () -> Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command.replace("%player%", player.getName())), i * 5L); // Delay of 5 ticks between each command
         }
-
-        // Then execute the give command after a delay of 1 second1 (20 server ticks)
-        Bukkit.getScheduler().scheduleSyncDelayedTask(this, () -> {
-            String giveCommand = Objects.requireNonNull(pickaxe.getString("giveCommand")).replace("%player%", player.getName());
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), giveCommand);
-        }, 20L);
 
         // Send a title to the player
         String title = ChatColor.translateAlternateColorCodes('&', Objects.requireNonNull(messagesConfig.getString("titleMessage.title")));
@@ -627,7 +717,6 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
         }
 
         // Use the customized message from messages.yml
-        // String pickaxeName = pickaxe.contains("name") ? pickaxe.getString("name") : "unknown";
         String boughtPickaxeMessage = String.format((Objects.requireNonNull(messagesConfig.getString("coins.boughtPickaxe"))), pickaxeName, cost);
         sender.sendMessage(boughtPickaxeMessage);
     }
@@ -1143,39 +1232,6 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
         }
     }
 
-    private void setupDatabase() {
-        try {
-            // Check if the 'players' table exists
-            ResultSet tables = connection.getMetaData().getTables(null, null, "players", null);
-            if (!tables.next()) {
-                // The 'players' table does not exist, create it
-                PreparedStatement statement = connection.prepareStatement(
-                        "CREATE TABLE players (" +
-                                "uuid VARCHAR(36) NOT NULL," +
-                                "coins INT NOT NULL," +
-                                "PRIMARY KEY (uuid)" +
-                                ")"
-                );
-                statement.executeUpdate();
-            }
-
-            // Check if the 'player_tiers' table exists
-            tables = connection.getMetaData().getTables(null, null, "player_tiers", null);
-            if (!tables.next()) {
-                // The 'player_tiers' table does not exist, create it
-                PreparedStatement statement = connection.prepareStatement(
-                        "CREATE TABLE player_tiers (" +
-                                "uuid VARCHAR(36) NOT NULL," +
-                                "tier INT NOT NULL," +
-                                "PRIMARY KEY (uuid)" +
-                                ")"
-                );
-                statement.executeUpdate();
-            }
-        } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "An exception was thrown!", e);
-        }
-    }
 
     private void setCoins(Player player, int amount) {
         try {
