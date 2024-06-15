@@ -1,39 +1,29 @@
-# Pickaxe configuration file
+##################################
+##                              ##
+##         Pickaxe.yml          ##
+##                              ##
+##################################
+
+
 
 # The commands are executed before the item is given to the player
-# Know limitations: The commands are executed as the console, so there is a limited length of the command
-
-starter_pickaxe:
-  name: "Basic Pickaxe"
-  displayName: "&aStarter Pickaxe"
-  lore:
-    - "&7This is a basic pickaxe."
-    - "&7..."
-  cost: 50
-  tier: 1
-  material: "WOODEN_PICKAXE"
-  enchantments:
-    - "EFFICIENCY:5"
-  commands:
-    - "itemjoin get settings %player%"
-
-
-#
 
 pickaxes:
-  starter_pickaxe:
-    name: "Basic Pickaxe"
+  starter_pickaxe:                              #leave the name as it is
+    name: "Starter Pickaxe"
     displayName: "&aStarter Pickaxe"
     lore:
-      - "&7This is a basic pickaxe."
+      - "&7This is the starter pickaxe."
       - "&7..."
     cost: 50
     tier: 1
-    material: "STONE_PICKAXE"
-    enchantments:
-      - "EFFICIENCY:5"
+    material: "WOODEN_PICKAXE"
     commands:
       - "itemjoin get settings %player%"
+
+
+##################
+
 
   super_pickaxe:
     name: "Super Pickaxe"

@@ -1,3 +1,10 @@
+##################################
+##                              ##
+##         MESSAGES.YML         ##
+##                              ##
+##################################
+
+
 coins:
   usage: "Usage: /stylelabormine coins <set|add|subtract|lookup> <player> [amount]"
   player_not_found: "Player not found."

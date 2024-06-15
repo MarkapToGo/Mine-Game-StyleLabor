@@ -1,4 +1,9 @@
-#CONFIGURATION FILE
+##################################
+##                              ##
+##          CONFIG.YML          ##
+##                              ##
+##################################
+
 clickDelay: 14
 disableWeather: true # set to false to enable weather
 disableTimeCycle: true # set to false to enable time cycle

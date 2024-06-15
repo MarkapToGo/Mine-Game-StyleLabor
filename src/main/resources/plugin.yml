@@ -1,3 +1,10 @@
+##################################
+##                              ##
+##          PLUGIN.YML          ##
+##                              ##
+##################################
+
+
 name: Mine-Game-StyleLabor
 version: '${project.version}'
 main: de.stylelabor.dev.minegamestylelabor.Mine_Game_StyleLabor
