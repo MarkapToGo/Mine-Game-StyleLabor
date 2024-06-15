@@ -147,7 +147,7 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
                         public void run() {
                             givePickaxe(event.getPlayer(), "starter_pickaxe");
                         }
-                    }.runTaskLater(Mine_Game_StyleLabor.this, 20L * 4); // 4 seconds delay
+                    }.runTaskLater(Mine_Game_StyleLabor.this, 20L * 3); // 3 seconds delay
                 }
             }
         }, this);
@@ -553,6 +553,8 @@ public final class Mine_Game_StyleLabor extends JavaPlugin implements Listener, 
                 }
             }
 
+            // Hide the enchantments
+            itemMeta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
             itemStack.setItemMeta(itemMeta);
         }
 

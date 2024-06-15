@@ -25,7 +25,7 @@ pickaxes:
 ##################
 
 
-  super_pickaxe:
+  1_pickaxe:
     name: "Super Pickaxe"
     displayName: "&bSuper Pickaxe"
     lore:
@@ -40,7 +40,7 @@ pickaxes:
       - "clear %player%"
       - "itemjoin get settings %player%"
 
-  mega_pickaxe:
+  2_pickaxe:
     name: "Mega Pickaxe"
     displayName: "&cMega Pickaxe"
     lore:
